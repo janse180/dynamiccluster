@@ -1,0 +1,79 @@
+#!/usr/bin/python
+
+import getopt, sys, os
+from dynamiccluster.server import Server
+from dynamiccluster.__version__ import version
+
+class DynamicClusterServer(object):
+	def __init__(self):
+		self.__server = None
+		self.__argv = None
+		self.__conf = dict()
+		self.__conf["background"] = False
+		self.__conf["pidfile"] = "/var/run/dynamiccluster/server.pid"
+
+	def displayVersion(self):
+		print "Dynamic Cluster v" + version
+
+	def dispUsage(self):
+		""" Prints DynamicCluster command line options and exits
+		"""
+		print "Usage: "+self.__argv[0]+" [OPTIONS]"
+		print
+		print "Dynamic Cluster v" + version + " manages worker nodes in the cloud"
+		print "based on the work load."
+		print
+		print "Options:"
+		print "    -b                   start in background"
+		print "    -f                   start in foreground"
+		print "    -p <FILE>            pidfile path"
+		print "    -h, --help           display this help message"
+		print "    -V, --version        print the version"
+
+	def __getCmdLineOptions(self, optList):
+		""" Gets the command line options
+		"""
+		for opt in optList:
+			if opt[0] == "-b":
+				self.__conf["background"] = True
+			if opt[0] == "-f":
+				self.__conf["background"] = False
+			if opt[0] == "-p":
+				self.__conf["pidfile"] = opt[1]
+			if opt[0] in ["-h", "--help"]:
+				self.displayUsage()
+				sys.exit(0)
+			if opt[0] in ["-V", "--version"]:
+				self.displayVersion()
+				sys.exit(0)
+
+	def start(self, argv):
+		# Command line options
+		self.__argv = argv
+
+		# Reads the command line options.
+		try:
+			cmdOpts = 'bfp:hV'
+			cmdLongOpts = ['help', 'version']
+			optList, args = getopt.getopt(self.__argv[1:], cmdOpts, cmdLongOpts)
+		except getopt.GetoptError:
+			self.dispUsage()
+			sys.exit(-1)
+
+		self.__getCmdLineOptions(optList)
+
+		self.__server = Server(self.__conf["background"], self.__conf["pidfile"])
+		try:
+			self.__server.start()
+			return True
+		except Exception, e:
+			#logSys.exception(e)
+			self.__server.quit()
+			return False
+
+if __name__ == "__main__":
+	server = DynamicClusterServer()
+	if server.start(sys.argv):
+		sys.exit(0)
+	else:
+		sys.exit(-1)
