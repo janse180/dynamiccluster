@@ -3,6 +3,13 @@
 import getopt, sys, os
 from dynamiccluster.server import Server
 from dynamiccluster.__version__ import version
+import os.path
+import logging
+from dynamiccluster.utilities import getLogger
+from dynamiccluster.server import NoClusterDefinedException
+
+# Gets the instance of the logger.
+log = getLogger("dynamiccluster")
 
 class DynamicClusterServer(object):
 	def __init__(self):
@@ -11,11 +18,13 @@ class DynamicClusterServer(object):
 		self.__conf = dict()
 		self.__conf["background"] = False
 		self.__conf["pidfile"] = "/var/run/dynamiccluster/server.pid"
+		self.__conf["verbose"] = 1
+		self.__conf["configfile"] = "/etc/dynamiccluster/dynamiccluster.yaml"
 
 	def displayVersion(self):
 		print "Dynamic Cluster v" + version
 
-	def dispUsage(self):
+	def displayUsage(self):
 		""" Prints DynamicCluster command line options and exits
 		"""
 		print "Usage: "+self.__argv[0]+" [OPTIONS]"
@@ -27,6 +36,7 @@ class DynamicClusterServer(object):
 		print "    -b                   start in background"
 		print "    -f                   start in foreground"
 		print "    -p <FILE>            pidfile path"
+		print "    -c <FILE>            configuration file path"
 		print "    -h, --help           display this help message"
 		print "    -V, --version        print the version"
 
@@ -40,6 +50,12 @@ class DynamicClusterServer(object):
 				self.__conf["background"] = False
 			if opt[0] == "-p":
 				self.__conf["pidfile"] = opt[1]
+			if opt[0] == "-c":
+				self.__conf["configfile"] = opt[1]
+			if opt[0] == "-v":
+				self.__conf["verbose"] = self.__conf["verbose"] + 1
+			if opt[0] == "-q":
+				self.__conf["verbose"] = self.__conf["verbose"] - 1
 			if opt[0] in ["-h", "--help"]:
 				self.displayUsage()
 				sys.exit(0)
@@ -53,21 +69,45 @@ class DynamicClusterServer(object):
 
 		# Reads the command line options.
 		try:
-			cmdOpts = 'bfp:hV'
+			cmdOpts = 'bfp:c:hVvq'
 			cmdLongOpts = ['help', 'version']
 			optList, args = getopt.getopt(self.__argv[1:], cmdOpts, cmdLongOpts)
 		except getopt.GetoptError:
-			self.dispUsage()
+			self.displayUsage()
 			sys.exit(-1)
 
 		self.__getCmdLineOptions(optList)
+		verbose = self.__conf["verbose"]
+		if verbose <= 0:
+			log.setLevel(logging.ERROR)
+		elif verbose == 1:
+			log.setLevel(logging.WARNING)
+		elif verbose == 2:
+			log.setLevel(logging.INFO)
+		else:
+			log.setLevel(logging.DEBUG)
+		# Add the default logging handler to dump to stderr
+		logout = logging.StreamHandler(sys.stderr)
+		# set a format which is simpler for console use
+		formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s - %(message)s')
+		# tell the handler to use this format
+		logout.setFormatter(formatter)
+		log.addHandler(logout)
 
-		self.__server = Server(self.__conf["background"], self.__conf["pidfile"])
+		if not os.path.isfile(self.__conf["configfile"]):
+			sys.stderr.write("Configuration file %s does not exist.\n" % self.__conf["configfile"])
+			return False
 		try:
+			self.__server = Server(self.__conf["background"], self.__conf["pidfile"], self.__conf["configfile"])
+			self.__server.init()
 			self.__server.start()
 			return True
+		except NoClusterDefinedException:
+			sys.stderr.write("You must define a valid cluster in config file.\n")
+			self.__server.quit()
+			return False
 		except Exception, e:
-			#logSys.exception(e)
+			log.exception(e)
 			self.__server.quit()
 			return False
 

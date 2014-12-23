@@ -1,3 +1,91 @@
-config:
+dynamic-cluster:
+  # max_idle_time (in seconds) the worker node will be deleted if it has been idle for this amount of time
+  #  default is 600
+  max_idle_time: 600
+  # max_down_time (in seconds) the worker node will be deleted if it has been down for this amount of time
+  #  default is 480
+  max_down_time: 480
+  # queue_poller_interval (in seconds) the time interval that Dynamic Torque queries the queue
+  #  default is 10
+  queue_poller_interval: 10
   admin-server:
     port: 8000
+  # a script to be executed after adding a node to Torque (just before setting it to online) 
+  #  it takes two parameters which are the hostname of the VM and the IP of the VM
+  #post_add_node_command: /the/path/some.sh {0} {1}
+  
+  # a script to be executed after removing a node from Torque (after it is destroyed from the cloud)
+  #  it takes two parameters which are the hostname of the VM and the IP of the VM
+  #post_remove_node_command: /the/path/some.sh {0} {1}
+  
+  # a script to be executed after cloud provisioning is finished (VM state in the cloud becomes ACTIVE) 
+  #  it takes two parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
+  #post_vm_provision_command: /the/path/some.sh {0} {1} {2}
+  
+  # a script to be executed after a VM is destroyed from the cloud
+  #  it takes two parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
+  #post_vm_destroy_command: /the/path/some.sh {0} {1} {2}
+    
+cluster:
+  type: torque
+  config:
+    queue_to_monitor: 
+      - short
+      - long
+    # the number of queued jobs to keep in memory for display
+    queued_job_number_to_display: 30
+    # the command to query jobs in the queue
+    #  it must return data in XML format (-x)
+    qstat_command: /usr/bin/qstat -x -t
+    
+    # the command to run pbsnodes command with differnt options
+    #  it takes two parameters, the option and the hostname of the VM
+    #    -x query node's details
+    #    -o hold node (set it to offline)
+    #    -c release node (clear OFFLINE)
+    #  it must return data in XML format (-x)
+    pbsnodes_command: /usr/bin/pbsnodes {0} {1}
+    
+    # the command to add a new node to torque
+    #  it takes one parameter which is the hostname of the VM
+    add_node_command: /usr/bin/qmgr -c "create node {0}"
+    
+    # the command to check node state in maui
+    #  it takes one parameter which is the hostname of the VM
+    check_node_command: /usr/bin/checknode {0}
+    
+    # the command to delete node from torque
+    #  it takes one parameter which is the hostname of the VM
+    remove_node_command: /usr/bin/qmgr -c "delete node {0}"
+    
+    # the command to set a property to node in torque
+    #  it takes three parameters {0} is the hostname of the VM, {1} is the name of the property, {2} is the value of the property
+    set_node_command: /usr/bin/qmgr -c "set node {0} {1} {2} {3}"
+    
+    # the command to get jobs' priorities
+    diagnose_p_command: /usr/bin/diagnose -p
+    
+    # the command to set account_string to a node
+    setres_command: /usr/bin/setres {0} {1} {2}
+    
+    # the command to unset account_string in a node
+    releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | awk '{{print $3}}' `
+    
+cloud:
+  default:
+    type: openstack
+    config:
+      username:
+      password:
+      project:
+      image_uuid:
+      flavor:
+      auth_url:
+      key_name:
+      security_groups:
+      availability_zones:
+      instance_name_prefix:
+      userdata_file:
+      reservation_type:
+      
+      
