@@ -5,9 +5,9 @@ dynamic-cluster:
   # max_down_time (in seconds) the worker node will be deleted if it has been down for this amount of time
   #  default is 480
   max_down_time: 480
-  # queue_poller_interval (in seconds) the time interval that Dynamic Torque queries the queue
+  # cluster_poller_interval (in seconds) the time interval that Dynamic Cluster queries the cluster
   #  default is 10
-  queue_poller_interval: 10
+  cluster_poller_interval: 10
   admin-server:
     port: 8000
   # a script to be executed after adding a node to Torque (just before setting it to online) 

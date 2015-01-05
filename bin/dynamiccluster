@@ -78,14 +78,17 @@ class DynamicClusterServer(object):
 
 		self.__getCmdLineOptions(optList)
 		verbose = self.__conf["verbose"]
+		print "Setting log level to", verbose
 		if verbose <= 0:
 			log.setLevel(logging.ERROR)
 		elif verbose == 1:
 			log.setLevel(logging.WARNING)
 		elif verbose == 2:
 			log.setLevel(logging.INFO)
-		else:
+		elif verbose == 3:
 			log.setLevel(logging.DEBUG)
+		else:
+			log.setLevel(logging.NOTICE)
 		# Add the default logging handler to dump to stderr
 		logout = logging.StreamHandler(sys.stderr)
 		# set a format which is simpler for console use

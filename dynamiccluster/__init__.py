@@ -8,7 +8,7 @@ Below derived from:
     https://mail.python.org/pipermail/tutor/2007-August/056243.html
 """
 
-logging.NOTICE = logging.INFO + 5
+logging.NOTICE = 5
 logging.addLevelName(logging.NOTICE, 'NOTICE')
 
 # define a new logger function for notice
