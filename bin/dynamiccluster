@@ -102,7 +102,6 @@ class DynamicClusterServer(object):
 			return False
 		try:
 			self.__server = Server(self.__conf["background"], self.__conf["pidfile"], self.__conf["configfile"])
-			self.__server.init()
 			self.__server.start()
 			return True
 		except NoClusterDefinedException:
