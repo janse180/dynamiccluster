@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>Emu Graph</title>
+
+    <!-- Bootstrap core CSS 
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+	@import url(css/style.css);
+    <link href="css/style.css" rel="stylesheet">-->
+	<style>
+	@import url(css/bootstrap.min.css);
+	body {
+	  padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+	}
+	</style>
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/admin">Dynamic Cluster Dashboard</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li id="wntab" class="active"><a href="javascript:initWNView()">Worker Nodes</a></li>
+            <li id="jtab" class="active"><a href="javascript:initJobView()">Jobs</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container" style="width: 1350px">
+      <!-- Main component for a primary marketing message or call to action 
+      <p>&nbsp;</p>
+      <p>&nbsp;</p>-->
+      <table width="100%">
+        <tr>
+	      <td>
+	      	<label for="graphtype">Type: </label>&nbsp;<select id="graphtype">
+	      		<option value="load" selected>Load</option>
+	      		<option value="net">Network</option>
+	      		<option value="mem">Memory</option>
+	      		<option value="disk">Disk</option>
+	      		<option value="cpu">CPU</option>
+	      	</select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	      </td>
+	      <td id="toolbar" align="right">
+	      	From <input type=text id=from value="-1d"> To <input type=text id=to value="Now">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	      	<button type="button" class="btn btn-info" id="go" rel="popover">Go</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	      	<label for="refresh">Refresh: </label>&nbsp;<select id="refresh">
+	      		<option value="0">Never</option>
+	      		<option value="10">Every 10 seconds</option>
+	      		<option value="30">Every 30 seconds</option>
+	      		<option value="60" selected>Every 1 mins</option>
+	      		<option value="120">Every 2 mins</option>
+	      	</select>
+	      </td>
+      	</tr>
+      </table>
+      <div id="main" width="100%"></div>
+<!--
+      <p>&nbsp;</p>
+      <img id="dt" align="middle"/>
+      <p>&nbsp;</p>
+      <img id="torque" align="middle"/>
+      <p>&nbsp;</p>
+      <img id="tenant" align="middle"/>
+-->
+    </div> <!-- /container -->
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/jquery.graphite.js"></script> 
+    <script src="js/moment.min.js"></script> <!-- 
+    <script src="js/d3.v2.js" charset="utf-8"></script>
+    <script src="js/cubism.v1.min.js"></script> 
+	<script type="text/javascript" src="js/highlight.min.js"></script>-->
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug 
+    <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
+    -->
+    <script src="js/dynamiccluster.js"></script>
+  </body>
+</html>
+

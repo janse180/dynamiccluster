@@ -1,4 +1,6 @@
 import json
+import time
+import inspect
 
 class WorkerNode(object):
     Inexistent, Starting, Idle, Busy, Error, Deleting = range(6)
@@ -10,7 +12,11 @@ class WorkerNode(object):
         self.state_start_time=0
         self.num_proc=0
         self.extra_attributes=None
+        self.time_in_current_state=0
+        
     def __repr__(self):
+        if self.time_in_current_state==0:
+            self.__dict__.update({'time_in_current_state':time.time()-self.state_start_time})
         return json.dumps(self, default=lambda o: o.__dict__)
         
 class Job(object):

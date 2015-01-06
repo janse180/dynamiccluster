@@ -78,7 +78,7 @@ class DynamicClusterServer(object):
 
 		self.__getCmdLineOptions(optList)
 		verbose = self.__conf["verbose"]
-		print "Setting log level to", verbose
+		#sys.stdout.write("Setting log level to %d\n" % verbose)
 		if verbose <= 0:
 			log.setLevel(logging.ERROR)
 		elif verbose == 1:
