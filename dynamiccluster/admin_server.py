@@ -1,5 +1,5 @@
 
-from bottle import route, run, static_file, abort
+from bottle import route, run, static_file, abort, request
 import threading
 from dynamiccluster.utilities import getLogger
 
@@ -28,8 +28,12 @@ class AdminServer(threading.Thread):
     
     @route('/workernode')
     def get_workernodes():
+        state = request.query.state
+        log.debug("only whose state=%s" % state)
         global server
         #log.debug(data.__dict__)
+        if len(state)>0:
+            return repr([w for w in server.info.worker_nodes if w.state==int(state)])
         return repr(server.info.worker_nodes)
 
     @route('/workernode/:hostname')
