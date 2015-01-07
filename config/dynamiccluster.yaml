@@ -8,6 +8,8 @@ dynamic-cluster:
   # cluster_poller_interval (in seconds) the time interval that Dynamic Cluster queries the cluster
   #  default is 10
   cluster_poller_interval: 10
+  # number of workers
+  worker_number: 2
   admin-server:
     port: 8001
   # a script to be executed after adding a node to Torque (just before setting it to online) 
@@ -72,8 +74,16 @@ cluster:
     releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | awk '{{print $3}}' `
     
 cloud:
-  default:
+  res-name:
     type: openstack
+    reservation:
+      queue:
+      account:
+      property:
+    quantity:
+      min:
+      max:
+    priority:
     config:
       username:
       password:
@@ -83,9 +93,8 @@ cloud:
       auth_url:
       key_name:
       security_groups:
-      availability_zones:
+      availability_zone:
       instance_name_prefix:
       userdata_file:
-      reservation_type:
       
       

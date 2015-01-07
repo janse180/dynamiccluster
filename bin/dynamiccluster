@@ -92,7 +92,7 @@ class DynamicClusterServer(object):
 		# Add the default logging handler to dump to stderr
 		logout = logging.StreamHandler(sys.stderr)
 		# set a format which is simpler for console use
-		formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s - %(message)s')
+		formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s')
 		# tell the handler to use this format
 		logout.setFormatter(formatter)
 		log.addHandler(logout)

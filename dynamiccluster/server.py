@@ -3,10 +3,14 @@ import time
 import os, signal, sys
 import admin_server
 import yaml
+from threading import Thread
+from multiprocessing import Process, Queue, cpu_count
 from dynamiccluster.admin_server import AdminServer
 import dynamiccluster.cluster_manager as cluster_manager
 from dynamiccluster.utilities import getLogger, excepthook
 from dynamiccluster.data import ClusterInfo
+from dynamiccluster.worker import Worker
+from dynamiccluster.worker import Task
 import dynamiccluster.__version__ as version
 
 log = getLogger(__name__)
@@ -23,10 +27,37 @@ class Server(object):
         self.info=ClusterInfo()
         self.__cluster=None
         self.__sleep=False
+        self.__task_queue=Queue()
+        self.__result_queue=Queue()
+        self.__workers=[]
         
     def __sigTERMhandler(self, signum, frame):
         log.debug("Caught signal %d. Exiting" % signum)
         self.quit()
+        
+    def query_and_process(self):
+        log.debug("query thread started")
+        interval=int(self.config['dynamic-cluster']['cluster_poller_interval'])
+        while self.__running:
+            time.sleep(1)
+            #log.debug(interval)
+            interval-=1
+            if interval==0:
+                #log.debug("__gather_cluster_info")
+                self.__gather_cluster_info()
+                interval=int(self.config['dynamic-cluster']['cluster_poller_interval'])
+                if not self.__sleep:
+                    tasks=self.check_existing_worker_nodes()
+                    if len(tasks)>0:
+                        for t in tasks:
+                            self.__task_queue.put(t)
+        
+    def check_existing_worker_nodes(self):
+        tasks=[]
+        for wn in self.info.worker_nodes:
+            if wn.type=="Physical":
+                continue
+        return tasks
         
     def start(self):
         log.info("Starting Dynamic Cluster v" + version.version)
@@ -48,21 +79,71 @@ class Server(object):
         adminServer=AdminServer(self)
         adminServer.daemon = True
         adminServer.start()
+        
+        worker_num=1
+        if "worker_number" in self.config['dynamic-cluster']:
+            worker_num=int(self.config['dynamic-cluster']['worker_number'])
+        else:
+            cpu_num=cpu_count()
+            if cpu_num>1:
+                worker_num=cpu_num-1
+        for i in xrange(worker_num):
+            p=Worker(i, self.__task_queue, self.__result_queue)
+            p.daemon=True
+            self.__workers.append(p)
+        for w in self.__workers:
+            w.start()
+            log.debug("started worker pid=%d"%w.pid)
 
-        interval=int(self.config['dynamic-cluster']['cluster_poller_interval'])
-        while self.__running:
-            time.sleep(1)
-            #log.debug(interval)
-            interval-=1
-            if interval==0:
-                #log.debug("__gather_cluster_info")
-                self.__gather_cluster_info()
-                interval=int(self.config['dynamic-cluster']['cluster_poller_interval'])
+        
+        # First set the mask to only allow access to owner
+        os.umask(0077)
+        if self.__background: # pragma: no cover
+            log.info("Starting in daemon mode")
+            ret = self.__createDaemon()
+            if ret:
+                log.info("Daemon started")
+            else:
+                log.error("Could not create daemon")
+                raise ServerInitializationError("Could not create daemon")
+        
+            # Creates a PID file.
+            if len(self.__pidfile)>0:
+                try:
+                    log.debug("Creating PID file %s" % self.__pidfile)
+                    pidFile = open(self.__pidfile, 'w')
+                    pidFile.write("%s\n" % os.getpid())
+                    pidFile.close()
+                except IOError, e:
+                    log.error("Unable to create PID file: %s" % e)
+            self.query_and_process()
+        else:
+            main_thread=Thread(target=self.query_and_process, name="QueryThread")
+            main_thread.daemon = True
+            main_thread.start()
+        
+        for w in self.__workers:
+            w.join()
+            
+        if self.__background:
+            log.debug("joining main thread")
+            main_thread.join()
+             # Removes the PID file.
+            try:
+                log.debug("Remove PID file %s" % self.__pidfile)
+                os.remove(self.__pidfile)
+            except OSError, e:
+                log.error("Unable to remove PID file: %s" % e)
+
+        log.info("Dynamic Cluster has stopped")
              
     def quit(self):
+        for i in xrange(len(self.__workers)):
+            log.debug("send Quit to shut down child process")
+            self.__task_queue.put(Task(Task.Quit))
         self.__running=False
         log.debug("Waiting for Dynamic Cluster to exit ...")
-        
+            
     def __gather_cluster_info(self):
         self.__cluster.update_worker_nodes(self.info.worker_nodes)
         self.info.queued_jobs, self.info.total_queued_job_number=self.__cluster.query_jobs()
@@ -168,3 +249,5 @@ class Server(object):
 class NoClusterDefinedException(BaseException):
     pass
 
+class ServerInitializationError(BaseException):
+    pass
