@@ -45,6 +45,12 @@ class AdminServer(threading.Thread):
             abort(404, "worker node not found")
         return repr(list[0])
     
+    @route('/workernode/:hostname', method="DELETE")
+    def delete_worker_node(hostname):
+        global server
+        server.delete_worker_node(hostname)
+        return {"success":True}
+    
     @route('/job')
     def get_jobs():
         global server
@@ -70,15 +76,37 @@ class AdminServer(threading.Thread):
         global server
         return server.get_status()
     
-    @route('/server/sleep', method="POST")
-    def get_server_sleep():
+    @route('/server/auto', method="PUT")
+    def get_server_auto():
         global server
-        return server.set_sleep()
+        server.set_auto()
+        return {"success":True}
     
-    @route('/server/sleep', method="DELETE")
-    def unset_server_sleep():
+    @route('/server/auto', method="DELETE")
+    def unset_server_auto():
         global server
-        return server.unset_sleep()
+        server.unset_auto()
+        return {"success":True}
+    
+    @route('/resource', method="GET")
+    def get_resources():
+        global server
+        return repr(server.resources)
+    
+    @route('/resource/:res', method="PUT")
+    def add_instace_to_res(res):
+        num_string = request.query.num
+        log.debug("launch %s instance in %s" % (num_string,res))
+        number=1
+        if len(num_string)>0 and isdigit(num_string):
+            number=int(num_string)
+        global server
+        try:
+            server.launch_new_instance(res, number)
+            return {"success":True}
+        except NoCloudResourceException:
+            abort(500, "Cloud resource not found")
+        abort(400, "Unknown error")
     
     def __init__(self, srv=None):
         threading.Thread.__init__(self, name=self.__class__.__name__)

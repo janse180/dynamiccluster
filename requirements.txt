@@ -1,2 +1,3 @@
 PyYAML
 python-novaclient
+Jinja2

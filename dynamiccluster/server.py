@@ -4,14 +4,19 @@ import os, signal, sys
 import admin_server
 import yaml
 from threading import Thread
+from Queue import Empty
 from multiprocessing import Process, Queue, cpu_count
 from dynamiccluster.admin_server import AdminServer
 import dynamiccluster.cluster_manager as cluster_manager
 from dynamiccluster.utilities import getLogger, excepthook
 from dynamiccluster.data import ClusterInfo
+from dynamiccluster.data import CloudResource
 from dynamiccluster.worker import Worker
 from dynamiccluster.worker import Task
+from dynamiccluster.worker import Result
+from dynamiccluster.data import WorkerNode
 import dynamiccluster.__version__ as version
+from dynamiccluster.cloud_manager import OpenStackManager, AWSManager 
 
 log = getLogger(__name__)
 
@@ -26,32 +31,60 @@ class Server(object):
         log.debug(json.dumps(self.config, indent=2))
         self.info=ClusterInfo()
         self.__cluster=None
-        self.__sleep=False
+        self.__auto=True
         self.__task_queue=Queue()
         self.__result_queue=Queue()
         self.__workers=[]
+        self.resources=[]
         
     def __sigTERMhandler(self, signum, frame):
         log.debug("Caught signal %d. Exiting" % signum)
         self.quit()
         
+    def __init_resources(self):
+        if "cloud" not in self.config:
+            raise NoCloudResourceException()
+        for res, val in self.config['cloud'].items():
+            log.debug(res+" "+str(val))
+            self.resources.append(CloudResource(res, **val))
+        #get flavor id for openstack resources
+        for res in self.resources:
+            if res.type.lower()=="openstack":
+                cloud_manager=OpenStackManager(res.name, res.config, max_attempt_time=1)
+                flavor_id=cloud_manager.get_flavor_id(res.config['flavor'])
+                res.config['flavor_id']=flavor_id
+        
     def query_and_process(self):
         log.debug("query thread started")
         interval=int(self.config['dynamic-cluster']['cluster_poller_interval'])
         while self.__running:
-            time.sleep(1)
+            try:
+                result=self.__result_queue.get(timeout=1)
+                self.process_result(result)
+            except Empty:
+                pass
             #log.debug(interval)
             interval-=1
             if interval==0:
                 #log.debug("__gather_cluster_info")
                 self.__gather_cluster_info()
                 interval=int(self.config['dynamic-cluster']['cluster_poller_interval'])
-                if not self.__sleep:
+                if self.__auto:
                     tasks=self.check_existing_worker_nodes()
                     if len(tasks)>0:
                         for t in tasks:
                             self.__task_queue.put(t)
         
+    def process_result(self, result):
+        if result.type==Result.Provision:
+            instances=result.data["instances"]
+            for i in instances:
+                wn=WorkerNode(i.instance_name)
+                wn.state=WorkerNode.Starting
+                wn.instance=i
+                wn.type=self.config['cloud'][i.cloud_resource]['type']
+                self.info.worker_nodes.append(wn)
+    
     def check_existing_worker_nodes(self):
         tasks=[]
         for wn in self.info.worker_nodes:
@@ -76,6 +109,8 @@ class Server(object):
             raise NoClusterDefinedException()
         
         self.__gather_cluster_info()
+        self.__init_resources()
+        
         adminServer=AdminServer(self)
         adminServer.daemon = True
         adminServer.start()
@@ -148,18 +183,24 @@ class Server(object):
         self.__cluster.update_worker_nodes(self.info.worker_nodes)
         self.info.queued_jobs, self.info.total_queued_job_number=self.__cluster.query_jobs()
         
-    def set_sleep(self):
-        self.__sleep=True
+    def set_auto(self):
+        self.__auto=True
 
-    def unset_sleep(self):
-        self.__sleep=False
+    def unset_auto(self):
+        self.__auto=False
         
     def get_status(self):
         status={}
-        status['sleep']=self.__sleep
+        status['auto_mode']=self.__auto
         status['cluster']=self.__cluster.state
         return status
 
+    def launch_new_instance(self, resource, number):
+        resources=[r for r in self.resources if r.name==resource]
+        if len(resources)<1:
+            raise NoCloudResourceException()
+        task=Task(Task.Provision, {"resource": resources[0], "number": number})
+        self.__task_queue.put(task)
 
     def __createDaemon(self): # pragma: no cover
         """ Detach a process from the controlling terminal and run it in the
@@ -250,4 +291,7 @@ class NoClusterDefinedException(BaseException):
     pass
 
 class ServerInitializationError(BaseException):
+    pass
+
+class NoCloudResourceException(BaseException):
     pass

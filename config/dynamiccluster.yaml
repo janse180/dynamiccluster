@@ -10,6 +10,8 @@ dynamic-cluster:
   cluster_poller_interval: 10
   # number of workers
   worker_number: 2
+  # auto mode, dynamic cluster works out which one to kill and how many to fire up according to work load
+  auto_mode: True
   admin-server:
     port: 8001
   # a script to be executed after adding a node to Torque (just before setting it to online) 
