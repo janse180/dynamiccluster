@@ -74,7 +74,9 @@ class TorqueManager(ClusterManager):
                     new_node.state_start_time=int(time.time())
                     new_node.extra_attributes={"mom_service_port": node["mom_service_port"], 
                                                  "mom_manager_port": node["mom_manager_port"],
-                                                 "gpus": node["gpus"], "status": node["status"], "ntype": node["ntype"]}
+                                                 "gpus": node["gpus"], "ntype": node["ntype"]}
+                    if "status" in node:
+                        new_node.extra_attributes["status"]=node["status"]
                     worker_node_list.append(new_node)
             if len(nodes)>0:
                 log.notice("nodes %d" % len(nodes))
@@ -207,7 +209,7 @@ class TorqueManager(ClusterManager):
         if "account" in reservation:
             torque_utils.set_res_for_node(wn, "account", reservation['account'], self.config['setres_command'])
         if "property" in reservation:
-            torque_utils.set_node_property(wn, reservation['property'])
+            torque_utils.set_node_property(wn, reservation['property'], self.config['set_node_command'])
             time.sleep(2)
         torque_utils.set_node_online(wn, self.config['set_node_command'])
         time.sleep(2)

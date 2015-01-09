@@ -118,9 +118,9 @@ class Server(object):
             workernodes[0].instance.tasked=False
             workernodes[0].instance.last_task_result=result.status
             if result.status==Result.Success:
+                workernodes[0].instance.last_update_time=time.time()
                 if result.data['ready']==True:
                     log.debug("workernode %s is ready, add it to cluster"%workernodes[0].hostname)
-                    resource=[r for r in self.resources if r.name==wn.instance.cloud_resource][0]
                     if self.__cluster.add_node_to_cluster(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation']):
                         workernodes[0].state=WorkerNode.Idle
                         # run post add_node_command here!
@@ -145,11 +145,11 @@ class Server(object):
                     log.debug("worker node %s is starting, and it is active in cloud, check its configuration state." % wn.hostname)
                     wn.instance.tasked=True
                     self.__task_queue.put(Task(Task.UpdateConfigStatus, {"checker": self.config['dynamic-cluster']['config-checker'], "instance": wn.instance}))
-            if wn.state==WorkerNode.Configuring:
+            if wn.state==WorkerNode.Configuring and time.time()-wn.instance.last_update_time>self.config['dynamic-cluster']['cloud_poller_interval']:
                 log.debug("worker node %s is configuring, and it is active in cloud, check its configuration state again." % wn.hostname)
                 wn.instance.tasked=True
                 self.__task_queue.put(Task(Task.UpdateConfigStatus, {"checker": self.config['dynamic-cluster']['config-checker'], "instance": wn.instance}))
-            if wn.state==WorkerNode.Deleting:
+            if wn.state==WorkerNode.Deleting and time.time()-wn.instance.last_update_time>self.config['dynamic-cluster']['cloud_poller_interval']:
                 log.debug("worker node %s is deleting, update its state now." % wn.hostname)
                 wn.instance.tasked=True
                 self.__task_queue.put(Task(Task.UpdateCloudState, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))

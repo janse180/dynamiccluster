@@ -1,6 +1,7 @@
 import subprocess
 import string
 import shlex
+import re
 
 from dynamiccluster.utilities import getLogger
 
@@ -76,7 +77,7 @@ def add_node_to_torque(wn, add_node_command):
     cmd=add_node_command.format(wn.hostname)
     log.notice("cmd %s"%cmd)
     try:
-        add_node = shlex.split(config.add_node_command.format(vm.hostname))
+        add_node = shlex.split(cmd)
         sp = subprocess.Popen(add_node, shell=False,
                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (cmd_out, cmd_err) = sp.communicate(input=None)
@@ -88,7 +89,7 @@ def add_node_to_torque(wn, add_node_command):
             return False
         return True
     except:
-        log.exception("Problem running %s, unexpected error" % string.join(add_node, " "))
+        log.exception("Problem running %s, unexpected error" % cmd)
         return False
 
 def check_node(wn, check_node_command):
@@ -138,8 +139,25 @@ def remove_node_from_torque(wn, remove_node_command):
         return 
 
 def set_np(wn, set_node_command):
-    log.debug("setting np=%s to node %s"%(wm.instance.vcpu_number, wn.hostname))
-    cmd=set_node_command.format(wn.hostname,"np","=",str(wm.instance.vcpu_number))
+    log.debug("setting np=%s to node %s"%(wn.instance.vcpu_number, wn.hostname))
+    cmd=set_node_command.format(wn.hostname,"np","=",str(wn.instance.vcpu_number))
+    log.notice("cmd %s"%cmd)
+    try:
+        set_np = shlex.split(cmd)
+        sp = subprocess.Popen(set_np, shell=False,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+#           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
+        if returncode != 0:
+            log.error("Error setting np to node %s"%wn.hostname)
+    except:
+        log.exception("Problem running %s, unexpected error" % cmd)
+        return 
+
+def set_node_property(wn, node_property, set_node_command):
+    log.debug("setting %s to node %s"%(node_property,wn.hostname))
+    cmd=set_node_command.format(wn.hostname,"properties","=",node_property)
     log.notice("cmd %s"%cmd)
     try:
         add_node = shlex.split(cmd)
@@ -149,26 +167,9 @@ def set_np(wn, set_node_command):
         returncode = sp.returncode
 #           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
         if returncode != 0:
-            log.error("Error setting np to node %s"%wn.hostname)
+            log.error("Error setting property to node %s"%wn.hostname)
     except:
-        log.exception("Problem running %s, unexpected error" % string.join(add_node, " "))
-        return 
-
-def set_node_property(vm, node_property):
-    log.debug("setting %s to node %s"%(node_property,vm.hostname))
-    cmd=config.set_node_command.format(vm.hostname,"properties","=",node_property)
-    log.verbose("cmd %s"%cmd)
-    try:
-        add_node = shlex.split(config.set_node_command.format(vm.hostname,"properties","=",node_property))
-        sp = subprocess.Popen(add_node, shell=False,
-                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (cmd_out, cmd_err) = sp.communicate(input=None)
-        returncode = sp.returncode
-#           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
-        if returncode != 0:
-            log.error("Error setting property to node %s"%vm.hostname)
-    except:
-        log.exception("Problem running %s, unexpected error" % string.join(add_node, " "))
+        log.exception("Problem running %s, unexpected error" % cmd)
         return 
 
 def add_node_property(vm, node_property):
@@ -188,19 +189,19 @@ def add_node_property(vm, node_property):
         log.exception("Problem running %s, unexpected error" % string.join(add_node, " "))
         return 
 
-def set_node_online(vm):
-    log.debug("setting node %s online"%(vm.hostname))
+def set_node_online(wn, set_node_command):
+    log.debug("setting node %s online"%(wn.hostname))
     try:
-        add_node = shlex.split(config.set_node_command.format(vm.hostname,"state","=","free"))
+        add_node = shlex.split(set_node_command.format(wn.hostname,"state","=","free"))
         sp = subprocess.Popen(add_node, shell=False,
                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (cmd_out, cmd_err) = sp.communicate(input=None)
         returncode = sp.returncode
 #           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
         if returncode != 0:
-            log.error("Error setting node %s online"%vm.hostname)
+            log.error("Error setting node %s online"%wn.hostname)
     except:
-        log.exception("Problem running %s, unexpected error" % string.join(add_node, " "))
+        log.exception("Problem running set_node_command %s, unexpected error"%wn.hostname)
         return
 
 def set_res_for_node(wn, res_type, res_name, setres_command):
