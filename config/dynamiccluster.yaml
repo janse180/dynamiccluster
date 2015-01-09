@@ -8,12 +8,20 @@ dynamic-cluster:
   # cluster_poller_interval (in seconds) the time interval that Dynamic Cluster queries the cluster
   #  default is 10
   cluster_poller_interval: 10
+  # cloud_poller_interval (in seconds) the time interval that Dynamic Cluster queries the cloud
+  #  default is 20
+  cloud_poller_interval: 20
   # number of workers
   worker_number: 2
   # auto mode, dynamic cluster works out which one to kill and how many to fire up according to work load
   auto_mode: True
   admin-server:
     port: 8001
+  # the method to check if a new instance has finished configuration
+  config-checker:
+  #   the basic one is to check if a port is opened (e.g. if a service is running and listening on a port)
+    port:
+      number: 15002
   # a script to be executed after adding a node to Torque (just before setting it to online) 
   #  it takes two parameters which are the hostname of the VM and the IP of the VM
   #post_add_node_command: /the/path/some.sh {0} {1}

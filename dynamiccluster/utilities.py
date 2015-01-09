@@ -2,6 +2,7 @@ import logging
 import sys
 import random
 import string
+import socket
 
 def getLogger(name):
     """Get logging.Logger instance with logger name convention
@@ -42,3 +43,9 @@ def load_template_with_jinja(location, vars):
     
     # Finally, process the template to produce our final text.
     return template.render( vars )
+
+def hostname_lookup(ip):
+    if hasattr(socket, 'setdefaulttimeout'):
+        # Set the default timeout on sockets to 10 seconds
+        socket.setdefaulttimeout(10)
+    return socket.gethostbyaddr(ip)[0]

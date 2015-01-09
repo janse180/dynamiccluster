@@ -3,7 +3,7 @@ import time
 import inspect
 
 class WorkerNode(object):
-    Inexistent, Starting, Idle, Busy, Error, Deleting = range(6)
+    Inexistent, Starting, Configuring, Idle, Busy, Error, Deleting = range(7)
     def __init__(self, hostname=None, type="Physical"):
         self.hostname=hostname
         self.type=type
@@ -16,15 +16,18 @@ class WorkerNode(object):
         self.instance=None
         
     def __repr__(self):
-        if self.time_in_current_state==0:
+        if self.time_in_current_state==0 and self.state_start_time>0:
             self.__dict__.update({'time_in_current_state':time.time()-self.state_start_time})
         return json.dumps(self, default=lambda o: o.__dict__)
         
 class Instance(object):
+    Inexistent, Starting, Active, Deleting, Error, Unknown = range(6)
     def __init__(self, uuid):
         self.uuid=uuid
         self.instance_name=None
+        self.state=Instance.Inexistent
         self.ip=None
+        self.public_dns_name=None
         self.vcpu_number=0
         self.flavor=None
         self.key_name=None
@@ -33,6 +36,9 @@ class Instance(object):
         self.image_uuid=None
         self.creation_time=None
         self.cloud_resource=None
+        self.last_update_time=0
+        self.tasked=False
+        self.last_task_result=-1
     def __repr__(self):
         return json.dumps(self, default=lambda o: o.__dict__)
 

@@ -1,7 +1,8 @@
-from dynamiccluster.utilities import get_unique_string, load_template_with_jinja, getLogger
+from dynamiccluster.utilities import get_unique_string, load_template_with_jinja, getLogger, hostname_lookup
 from dynamiccluster.data import Instance
 import time
 from novaclient.v1_1 import client
+from novaclient.exceptions import NotFound
 import os
 
 log = getLogger(__name__)
@@ -18,7 +19,7 @@ class CloudManager(object):
         assert 0, 'Must define boot'
     def destroy(self, **kwargs):
         assert 0, 'Must define boot'
-    def get(self, **kwargs):
+    def update(self, **kwargs):
         assert 0, 'Must define get'
     
     
@@ -71,6 +72,7 @@ class OpenStackManager(CloudManager):
                 instance.availability_zone=self.config['availability_zone']
                 instance.image_uuid=self.config['image_uuid']
                 instance.cloud_resource=self.name
+                instance.state=self.get_state(server)
                 log.debug("launched a new instance: %s"%instance)
                 new_instances.append(instance)
             except:
@@ -79,6 +81,39 @@ class OpenStackManager(CloudManager):
         if len(new_instances)==0:
             raise CloudNotAvailableException()
         return new_instances
+    
+    def update(self, instance):
+        log.notice("Getting instance %s..." % (instance.uuid))
+        try:
+            server = self.__conn.servers.get(instance.uuid)
+        except NotFound:
+            log.info("instance %s doesn't exist"%uuid)
+            instance.state=Instance.Inexistent
+            return instance
+        except:
+            log.exception("Unable to get instance details.")
+            raise CloudNotAvailableException()
+        instance.state=self.get_state(server)
+        log.debug("instance %s; Cloud Status: %s; State: %s" % (server.id,server.status, instance.state))
+        instance.creation_time=server.created
+        if instance.vcpu_number == 0:
+            try:
+                instance.vcpu_number=self.__conn.flavors.get(server.flavor['id']).vcpus
+            except:
+                log.exception("Unable to get flavor for instance %s"%instance.uuid)
+        if instance.state==Instance.Active:
+            try:
+                ip=server.addresses.values()[0][0]['addr']
+                if instance.public_dns_name==None:
+                    instance.public_dns_name=hostname_lookup(ip)
+            except:
+                log.exception("Unable to get IP for instance %s"%instance.uuid)
+                instance.state=Instance.Starting
+                return instance
+            instance.availability_zone=getattr(server,"OS-EXT-AZ:availability_zone")
+            instance.image_id=server.image['id']
+            instance.ip=ip
+        return instance
         
     def get_flavor_id(self, flavor):
         try:
@@ -89,6 +124,18 @@ class OpenStackManager(CloudManager):
         except:
             log.exception("Encounter an error when getting flavor list.")
         raise FlavorNotFoundException()
+    
+    def get_state(self, server):
+        if server.status == "ERROR" or getattr(server,"OS-EXT-STS:vm_state") == "error":
+            return Instance.Error
+        elif server.status == "ACTIVE":
+            return Instance.Active
+        elif server.status == "DELETING" or getattr(server,"OS-EXT-STS:task_state") == "Deleting":
+            return Instance.Active
+        elif server.status != "ACTIVE" or getattr(server,"OS-EXT-STS:vm_state") != "active" or getattr(server,"OS-EXT-STS:task_state") is not None:
+            return Instance.Starting
+        log.info("instance %s is in a strange state: status %s, vm_state %s, task_state %s" % (server.id, server.status, getattr(server,"OS-EXT-STS:vm_state"), getattr(server,"OS-EXT-STS:task_state")))
+        return Instance.Unknown
         
 class AWSManager(CloudManager):
     def __init__(self, config):

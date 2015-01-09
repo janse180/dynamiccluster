@@ -22,6 +22,10 @@ class ClusterManager(object):
         assert 0, 'Must define update_worker_nodes'
     def query_jobs(self):
         assert 0, 'Must define query_jobs'
+    def add_node_to_cluster(self, node, reservation):
+        assert 0, 'Must define add_node_to_cluster'
+    def remove_node_from_cluster(self, node):
+        assert 0, 'Must define remove_node_from_cluster'
     
 class TorqueManager(ClusterManager):
     def __init__(self, config):
@@ -170,3 +174,42 @@ class TorqueManager(ClusterManager):
             log.exception("cannot parse diagnose_p output: %s" % diag_p_output)
             return [], 0
             
+    def add_node_to_cluster(self, wn, reservation):
+        log.debug("adding node %s to cluster with reservation %s" % (wn, reservation))
+        retry=5
+        while retry>0:
+            ret=torque_utils.add_node_to_torque(wn, self.config['add_node_command'])
+            if ret:
+                break
+            retry-=1
+            time.sleep(1)
+        if not ret:
+            log.error("cannot add %s to torque, delete it" % vm.hostname)
+            return False
+        #check if the new VM is added to torque
+        retry=60
+        while retry>0:
+            node_state, s = torque_utils.check_node(wn, self.config['check_node_command'])
+            if node_state is not None:
+                break
+            retry-=1
+            log.debug("vm %s is not showing in maui yet" % wn.hostname)
+            time.sleep(1)
+        if node_state is None:
+            log.error("cannot see %s in maui, delete it" % wn.hostname)
+            torque_utils.remove_node_from_torque(wn, self.config['remove_node_command'])
+            return False
+        torque_utils.set_np(wn, self.config['set_node_command'])
+        time.sleep(2)
+        # set account string to wn
+        if "queue" in reservation:
+            torque_utils.set_res_for_node(wn, "queue", reservation['queue'], self.config['setres_command'])
+        if "account" in reservation:
+            torque_utils.set_res_for_node(wn, "account", reservation['account'], self.config['setres_command'])
+        if "property" in reservation:
+            torque_utils.set_node_property(wn, reservation['property'])
+            time.sleep(2)
+        torque_utils.set_node_online(wn, self.config['set_node_command'])
+        time.sleep(2)
+        return True
+    

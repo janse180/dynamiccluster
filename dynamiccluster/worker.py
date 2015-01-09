@@ -2,24 +2,29 @@ import multiprocessing
 import signal
 from dynamiccluster.utilities import getLogger
 from Queue import Empty
-from dynamiccluster.cloud_manager import OpenStackManager, AWSManager 
+from dynamiccluster.cloud_manager import OpenStackManager, AWSManager
+from dynamiccluster.config_checker import PortChecker
 
 log = getLogger(__name__)
 
 class Task(object):
-    Quit, Provision, Destroy, Update = range(4)
+    Quit, Provision, Destroy, UpdateCloudState, UpdateConfigStatus = range(5)
     def __init__(self, type, data={}):
         self.type=type
         self.data=data
         
     def __str__(self):
-        return "type: %s, data: %s"%(["Quit", "Provision", "Destroy", "Update"][self.type], self.data)
+        return "Task: type: %s, data: %s"%(["Quit", "Provision", "Destroy", "UpdateCloudState", "UpdateConfigStatus"][self.type], self.data)
     
 class Result(object):
-    WorkerCrash, Provision = range(2)
-    def __init__(self, type, data={}):
+    WorkerCrash, Provision, Destroy, UpdateCloudState, UpdateConfigStatus = range(5)
+    Success, Failed = range(2)
+    def __init__(self, type, status, data={}):
         self.type=type
+        self.status=status
         self.data=data
+    def __str__(self):
+        return "Result: type: %s, status: %s, data: %s"%(["WorkerCrash", "Provision", "Destroy", "UpdateCloudState", "UpdateConfigStatus"][self.type], ["Success", "Failed"][self.status], self.data)
       
 class Worker(multiprocessing.Process):
     def __init__(self, id, task_queue, result_queue):
@@ -41,14 +46,24 @@ class Worker(multiprocessing.Process):
                     task=self.__task_queue.get(timeout=1)
                     log.debug("got task %s"%task)
                     if task.type==Task.Provision:
-                        self.run_provision_task(task)
-                    if task.type==Task.Quit:
+                        cloud_manager=self.__get_cloud_manager(task.data['resource'])
+                        instances=cloud_manager.boot(number=task.data['number'])
+                        self.__result_queue.put(Result(Result.Provision, Result.Success, {'instances':instances}))
+                    elif task.type==Task.UpdateCloudState:
+                        cloud_manager=self.__get_cloud_manager(task.data['resource'])
+                        instance=cloud_manager.update(instance=task.data['instance'])
+                        self.__result_queue.put(Result(Result.UpdateCloudState, Result.Success, {'instance':instance}))
+                    elif task.type==Task.UpdateConfigStatus:
+                        checker=self.__get_config_checker(task.data['checker'])
+                        self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':instance, "ready": checker.check(task.data['instance'].ip)}))
+                    elif task.type==Task.Quit:
                         log.debug("got quit task, existing...")
                         break
                 except Empty:
                     pass
                 except Exception as e:
-                    log.exception("task (%s) cannot be executed. type: %s, data: %s" % task)
+                    log.exception("task (%s) cannot be executed." % task)
+                    self.__result_queue.put(Result(task.type, Result.Failed, task.data))
             except KeyboardInterrupt:
                     break
             except Exception as e:
@@ -57,16 +72,22 @@ class Worker(multiprocessing.Process):
                 break
         log.debug("worker %s has quit"%self.__id)
     
-    def run_provision_task(self, task):
-        cloud_manager=None
-        if task.data['resource'].type.lower()=="openstack":
-            cloud_manager=OpenStackManager(task.data['resource'].name, task.data['resource'].config)
-        elif task.data['resource'].type.lower()=="aws":
-            cloud_manager=AWSManager(task.data['resource'].name, task.data['resource'].config)
+    def __get_cloud_manager(self, resource):
+        if resource.type.lower()=="openstack":
+            return OpenStackManager(resource.name, resource.config)
+        elif resource.type.lower()=="aws":
+            return AWSManager(resource.name, resource.config)
         else:
-            raise CloudNotSupportedException("Cloud type %s is not supported" % task.data['resource'].type)
-        instances=cloud_manager.boot(number=task.data['number'])
-        self.__result_queue.put(Result(Result.Provision, {'instances':instances}))
+            raise CloudNotSupportedException("Cloud type %s is not supported" % resource.type)
+        
+    def __get_config_checker(self, config):
+        if config.keys()[0].lower()=="port":
+            return PortChecker(port=config['port']['number'])
+        else:
+            raise ConfigCheckerNotSupportedException("Config checker %s is not supported" % config.keys()[0])
         
 class CloudNotSupportedException(BaseException):
+    pass
+
+class ConfigCheckerNotSupportedException(BaseException):
     pass

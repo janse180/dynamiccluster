@@ -25,10 +25,11 @@ function convertTimeInCurrentState(t) {
 
 function convertWNState(s) { 
 	if (s==1) return "Starting";
-	if (s==2) return "Idle";
-	if (s==3) return "Busy";
-	if (s==4) return "Error";
-	if (s==5) return "Deleting";
+	if (s==2) return "Configuring";
+	if (s==3) return "Idle";
+	if (s==4) return "Busy";
+	if (s==5) return "Error";
+	if (s==6) return "Deleting";
 	return "Inexistent";
 }
 

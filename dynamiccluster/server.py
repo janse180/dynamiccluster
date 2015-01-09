@@ -11,12 +11,14 @@ import dynamiccluster.cluster_manager as cluster_manager
 from dynamiccluster.utilities import getLogger, excepthook
 from dynamiccluster.data import ClusterInfo
 from dynamiccluster.data import CloudResource
+from dynamiccluster.data import Instance
 from dynamiccluster.worker import Worker
 from dynamiccluster.worker import Task
 from dynamiccluster.worker import Result
 from dynamiccluster.data import WorkerNode
 import dynamiccluster.__version__ as version
-from dynamiccluster.cloud_manager import OpenStackManager, AWSManager 
+from dynamiccluster.cloud_manager import OpenStackManager, AWSManager
+from dynamiccluster.hooks import run_post_vm_provision_command
 
 log = getLogger(__name__)
 
@@ -60,6 +62,7 @@ class Server(object):
         while self.__running:
             try:
                 result=self.__result_queue.get(timeout=1)
+                log.debug("got a result: %s"%result)
                 self.process_result(result)
             except Empty:
                 pass
@@ -69,28 +72,88 @@ class Server(object):
                 #log.debug("__gather_cluster_info")
                 self.__gather_cluster_info()
                 interval=int(self.config['dynamic-cluster']['cluster_poller_interval'])
-                if self.__auto:
-                    tasks=self.check_existing_worker_nodes()
-                    if len(tasks)>0:
-                        for t in tasks:
-                            self.__task_queue.put(t)
+                self.check_existing_worker_nodes()
         
     def process_result(self, result):
         if result.type==Result.Provision:
-            instances=result.data["instances"]
-            for i in instances:
-                wn=WorkerNode(i.instance_name)
-                wn.state=WorkerNode.Starting
-                wn.instance=i
-                wn.type=self.config['cloud'][i.cloud_resource]['type']
-                self.info.worker_nodes.append(wn)
-    
+            if result.status==Result.Success:
+                instances=result.data["instances"]
+                for i in instances:
+                    wn=WorkerNode(i.instance_name)
+                    wn.state=WorkerNode.Starting
+                    wn.state_start_time=time.time()
+                    wn.instance=i
+                    wn.instance.last_update_time=time.time()
+                    wn.num_proc=wn.instance.vcpu_number
+                    wn.type=self.config['cloud'][i.cloud_resource]['type']
+                    self.info.worker_nodes.append(wn)
+            else:
+                log.debug("failed to start instances, try again later.")
+        elif result.type==Result.UpdateCloudState:
+            instance=result.data['instance']
+            workernodes=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.uuid==instance.uuid]
+            if len(workernodes)==0:
+                log.error("instance %s is not in the current list. something is wrong" % instance.uuid)
+                return
+            instance.tasked=False
+            instance.last_task_result=result.status
+            workernodes[0].instance=instance
+            if result.status==Result.Success:
+                workernodes[0].instance.last_update_time=time.time()
+                if workernodes[0].instance.state==Instance.Active:
+                    workernodes[0].hostname=workernodes[0].instance.public_dns_name
+                    workernodes[0].state=WorkerNode.Configuring
+                    # run post-provision script here!
+                    if "post_vm_provision_command" in self.config['dynamic-cluster']:
+                        run_post_vm_provision_command(workernodes[0], self.config['dynamic-cluster']["post_vm_provision_command"])
+                log.debug("updated workernode %s"%workernodes[0])
+            else:
+                log.debug("failed to update instance %s, try again later."%instance.uuid)
+        elif result.type==Result.UpdateConfigStatus:
+            instance=result.data['instance']
+            workernodes=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.uuid==instance.uuid]
+            if len(workernodes)==0:
+                log.error("instance %s is not in the current list. something is wrong" % instance.uuid)
+                return
+            workernodes[0].instance.tasked=False
+            workernodes[0].instance.last_task_result=result.status
+            if result.status==Result.Success:
+                if result.data['ready']==True:
+                    log.debug("workernode %s is ready, add it to cluster"%workernodes[0].hostname)
+                    resource=[r for r in self.resources if r.name==wn.instance.cloud_resource][0]
+                    if self.__cluster.add_node_to_cluster(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation']):
+                        workernodes[0].state=WorkerNode.Idle
+                        # run post add_node_command here!
+                        if "post_add_node_command" in self.config['dynamic-cluster']:
+                            run_post_add_node_command(workernodes[0], self.config['dynamic-cluster']["post_add_node_command"])
+                    else:
+                        # cannot add this node to cluster, delete it
+                        pass
+                    
     def check_existing_worker_nodes(self):
-        tasks=[]
         for wn in self.info.worker_nodes:
-            if wn.type=="Physical":
+            if wn.type.lower()=="physical" or wn.instance.tasked==True:
                 continue
-        return tasks
+            if wn.state==WorkerNode.Starting:
+                if wn.instance.state!=Instance.Active and time.time()-wn.instance.last_update_time>self.config['dynamic-cluster']['cloud_poller_interval']:
+                    log.debug("worker node %s is starting, and the cloud is starting it, update its state now." % wn.hostname)
+                    wn.instance.tasked=True
+                    self.__task_queue.put(Task(Task.UpdateCloudState, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))
+                if wn.instance.state==Instance.Active:
+                    wn.hostname=wn.instance.public_dns_name
+                    wn.state=WorkerNode.Configuring
+                    log.debug("worker node %s is starting, and it is active in cloud, check its configuration state." % wn.hostname)
+                    wn.instance.tasked=True
+                    self.__task_queue.put(Task(Task.UpdateConfigStatus, {"checker": self.config['dynamic-cluster']['config-checker'], "instance": wn.instance}))
+            if wn.state==WorkerNode.Configuring:
+                log.debug("worker node %s is configuring, and it is active in cloud, check its configuration state again." % wn.hostname)
+                wn.instance.tasked=True
+                self.__task_queue.put(Task(Task.UpdateConfigStatus, {"checker": self.config['dynamic-cluster']['config-checker'], "instance": wn.instance}))
+            if wn.state==WorkerNode.Deleting:
+                log.debug("worker node %s is deleting, update its state now." % wn.hostname)
+                wn.instance.tasked=True
+                self.__task_queue.put(Task(Task.UpdateCloudState, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))
+                
         
     def start(self):
         log.info("Starting Dynamic Cluster v" + version.version)
