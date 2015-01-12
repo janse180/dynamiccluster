@@ -56,6 +56,10 @@ class Worker(multiprocessing.Process):
                     elif task.type==Task.UpdateConfigStatus:
                         checker=self.__get_config_checker(task.data['checker'])
                         self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':task.data['instance'], "ready": checker.check(task.data['instance'].ip)}))
+                    elif task.type==Task.Destroy:
+                        cloud_manager=self.__get_cloud_manager(task.data['resource'])
+                        cloud_manager.destroy(instance=task.data['instance'])
+                        self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':task.data['instance']}))
                     elif task.type==Task.Quit:
                         log.debug("got quit task, existing...")
                         break

@@ -22,10 +22,12 @@ class ClusterManager(object):
         assert 0, 'Must define update_worker_nodes'
     def query_jobs(self):
         assert 0, 'Must define query_jobs'
-    def add_node_to_cluster(self, node, reservation):
-        assert 0, 'Must define add_node_to_cluster'
-    def remove_node_from_cluster(self, node):
-        assert 0, 'Must define remove_node_from_cluster'
+    def add_node(self, node, reservation):
+        assert 0, 'Must define add_node'
+    def hold_node(self, node):
+        assert 0, 'Must define hold_node'
+    def remove_node(self, node):
+        assert 0, 'Must define remove_node'
     
 class TorqueManager(ClusterManager):
     def __init__(self, config):
@@ -50,34 +52,37 @@ class TorqueManager(ClusterManager):
                 #if not config.node_property or ('properties' in node and node['properties'].find(config.node_property)>-1):
                 #print worker_node_list
                 nodes=[n for n in worker_node_list if n.hostname==node["name"]]
+                the_node=None
                 if len(nodes)>0:
-                    if "jobs" in node:
-                        nodes[0].jobs=node["jobs"]
-                        if nodes[0].state!=WorkerNode.Busy:
-                            nodes[0].state_start_time=int(time.time())
-                            nodes[0].state=WorkerNode.Busy
-                    else:
-                        if nodes[0].state!=WorkerNode.Idle:
-                            nodes[0].jobs=None
-                            nodes[0].state=WorkerNode.Idle
-                            nodes[0].state_start_time=int(time.time())
+                    the_node=nodes[0]
                 else:
-                    new_node=WorkerNode(node["name"])
-                    new_node.num_proc=int(node["np"])
+                    the_node=WorkerNode(node["name"])
+                    the_node.num_proc=int(node["np"])
                     if "Account_Name" in node:
-                        new_node.account_string=node["Account_Name"]
-                    if "jobs" in node:
-                        new_node.jobs=node["jobs"]
-                        new_node.state=WorkerNode.Busy
+                        the_node.account_string=node["Account_Name"]
+                    worker_node_list.append(the_node)
+                node_state, s = torque_utils.check_node(the_node, self.config['check_node_command'])
+                the_node.time_in_current_state=s
+                if "offline" in node["state"].lower():
+                    if node_state == "drained":
+                        the_node.state=WorkerNode.Held
                     else:
-                        new_node.state=WorkerNode.Idle
-                    new_node.state_start_time=int(time.time())
-                    new_node.extra_attributes={"mom_service_port": node["mom_service_port"], 
-                                                 "mom_manager_port": node["mom_manager_port"],
-                                                 "gpus": node["gpus"], "ntype": node["ntype"]}
-                    if "status" in node:
-                        new_node.extra_attributes["status"]=node["status"]
-                    worker_node_list.append(new_node)
+                        the_node.state=WorkerNode.Holding
+                if "down" in node_state:
+                    the_node.state=WorkerNode.Error
+                if node_state == "busy":
+                    the_node.state=WorkerNode.Busy
+                elif node_state == "idle":
+                    the_node.state=WorkerNode.Idle
+                if "jobs" in node:
+                    the_node.jobs=node["jobs"]
+                else:
+                    the_node.jobs=None
+                the_node.extra_attributes={"mom_service_port": node["mom_service_port"], 
+                                             "mom_manager_port": node["mom_manager_port"],
+                                             "gpus": node["gpus"], "ntype": node["ntype"]}
+                if "status" in node:
+                    the_node.extra_attributes["status"]=node["status"]
             if len(nodes)>0:
                 log.notice("nodes %d" % len(nodes))
             return 
@@ -176,7 +181,7 @@ class TorqueManager(ClusterManager):
             log.exception("cannot parse diagnose_p output: %s" % diag_p_output)
             return [], 0
             
-    def add_node_to_cluster(self, wn, reservation):
+    def add_node(self, wn, reservation):
         log.debug("adding node %s to cluster with reservation %s" % (wn, reservation))
         retry=5
         while retry>0:
@@ -204,14 +209,35 @@ class TorqueManager(ClusterManager):
         torque_utils.set_np(wn, self.config['set_node_command'])
         time.sleep(2)
         # set account string to wn
-        if "queue" in reservation:
+        if "queue" in reservation and reservation['queue'] is not None:
             torque_utils.set_res_for_node(wn, "queue", reservation['queue'], self.config['setres_command'])
-        if "account" in reservation:
+        if "account" in reservation and reservation['account'] is not None:
             torque_utils.set_res_for_node(wn, "account", reservation['account'], self.config['setres_command'])
-        if "property" in reservation:
+        if "property" in reservation and reservation['property'] is not None:
             torque_utils.set_node_property(wn, reservation['property'], self.config['set_node_command'])
             time.sleep(2)
         torque_utils.set_node_online(wn, self.config['set_node_command'])
         time.sleep(2)
         return True
     
+    def remove_node(self, wn):
+        log.debug("removing node %s from cluster" % wn)
+        torque_utils.hold_node_in_torque(wn, self.config['pbsnodes_command'])
+        #check if the VM is drained in MAUI
+        retry=60
+        while retry>0:
+            node_state, s = torque_utils.check_node(wn, self.config['check_node_command'])
+            if node_state in ["drained", "down"]:
+                break
+            retry-=1
+            log.debug("state of wn %s is not populated to maui yet" % wn.hostname)
+            time.sleep(1)
+        if node_state not in ["drained", "down"]:
+            log.error("cannot see updated state of %s in maui, try again later" % wn.hostname)
+            return False
+        torque_utils.remove_node_from_torque(wn, self.config['remove_node_command'])
+        return True
+    
+    def hold_node(self, wn):
+        log.debug("hold node %s in cluster" % wn)
+        torque_utils.hold_node_in_torque(wn, self.config['pbsnodes_command'])

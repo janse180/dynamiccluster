@@ -2,6 +2,7 @@
 from bottle import route, run, static_file, abort, request
 import threading
 from dynamiccluster.utilities import getLogger
+from dynamiccluster.exceptions import NoCloudResourceException
 
 log = getLogger(__name__)
 server = None
@@ -48,6 +49,9 @@ class AdminServer(threading.Thread):
     @route('/workernode/:hostname', method="DELETE")
     def delete_worker_node(hostname):
         global server
+        list=[w for w in server.info.worker_nodes if w.hostname==hostname]
+        if len(list)==0:
+            abort(404, "worker node not found")
         server.delete_worker_node(hostname)
         return {"success":True}
     
@@ -98,7 +102,7 @@ class AdminServer(threading.Thread):
         num_string = request.query.num
         log.debug("launch %s instance in %s" % (num_string,res))
         number=1
-        if len(num_string)>0 and isdigit(num_string):
+        if len(num_string)>0 and num_string.isdigit():
             number=int(num_string)
         global server
         try:

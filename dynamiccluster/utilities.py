@@ -3,6 +3,7 @@ import sys
 import random
 import string
 import socket
+import datetime
 
 def getLogger(name):
     """Get logging.Logger instance with logger name convention
@@ -49,3 +50,8 @@ def hostname_lookup(ip):
         # Set the default timeout on sockets to 10 seconds
         socket.setdefaulttimeout(10)
     return socket.gethostbyaddr(ip)[0]
+
+def unix_time(dt):
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    delta = dt - epoch
+    return delta.days*86400+delta.seconds+delta.microseconds/1e6

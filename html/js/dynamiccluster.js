@@ -3,7 +3,9 @@ var timer ;
 function initWNView(){
 	  $('#wntab').addClass('active');
 	  $('#jtab').removeClass('active');
-	  $("#main").html('<div class="panel panel-default"><div class="panel-heading">Worker Nodes</div><table class="table"><thead><tr><th>Hostname</th><th>Type</th><th>Proc Num</th><th>State</th><th>Time in current state</th><th>Jobs</th><th>Attributes</th></tr></thead><tbody id="wntable"></tbody></table></div>');
+	  $("#main").html('<div class="panel panel-default"><div class="panel-heading">Worker Nodes</div><table class="table"><thead>'+
+			  '<tr><th>Hostname</th><th>Type</th><th>Proc Num</th><th>State</th><th>IP</th><th>State In Cloud</th><th>Time in current state</th>'+
+			  '<th>Resource</th><th>Jobs</th></tr></thead><tbody id="wntable"></tbody></table></div>');
 	  $.getJSON( "/workernode", function( data ) {
 		  var items = [];
 		  var nodes = [];
@@ -11,7 +13,19 @@ function initWNView(){
 		  $.each( data, function( key, val ) {
 			  //alert(val.id);
 			  //console.log(val);
-			  $('#wntable').append('<tr><th>'+val.hostname+'</th><td>'+val.type+'</td><td>'+val.num_proc+'</td><td>'+convertWNState(val.state)+'</td><td>'+convertTimeInCurrentState(val.time_in_current_state)+'</td><td>'+val.jobs+'</td><td>A</td></tr>'); 
+			  resource="";
+			  ip="";
+			  cloud_state="";
+			  if (val.instance) {
+				  resource=val.instance.cloud_resource;
+				  ip=val.instance.ip;
+				  cloud_state=convertCloudState(val.instance.state);
+			  }
+			  jobs="";
+			  if (val.jobs) jobs=val.jobs;
+			  $('#wntable').append('<tr><th>'+val.hostname+'</th><td>'+val.type+'</td><td>'+val.num_proc+'</td><td>'+
+					  convertWNState(val.state)+'</td><td>'+ip+'</td><td>'+cloud_state+'</td><td>'+convertTimeInCurrentState(val.time_in_current_state)+
+					  '</td><td>'+resource+'</td><td>'+jobs+'</td></tr>'); 
 		  });
 		});
 }
@@ -23,6 +37,14 @@ function convertTimeInCurrentState(t) {
 	return parseInt(t)+"s";
 }
 
+function convertCloudState(s){
+	if (s==0) return "Inexistent";
+	if (s==1) return "Starting";
+	if (s==2) return "Active";
+	if (s==3) return "Deleting";
+	if (s==4) return "Error";
+	return "Unknown";
+}
 function convertWNState(s) { 
 	if (s==1) return "Starting";
 	if (s==2) return "Configuring";
@@ -30,6 +52,8 @@ function convertWNState(s) {
 	if (s==4) return "Busy";
 	if (s==5) return "Error";
 	if (s==6) return "Deleting";
+	if (s==7) return "Holding";
+	if (s==8) return "Held";
 	return "Inexistent";
 }
 

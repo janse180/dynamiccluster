@@ -3,7 +3,7 @@ import time
 import inspect
 
 class WorkerNode(object):
-    Inexistent, Starting, Configuring, Idle, Busy, Error, Deleting = range(7)
+    Inexistent, Starting, Configuring, Idle, Busy, Error, Deleting, Holding, Held = range(9)
     def __init__(self, hostname=None, type="Physical"):
         self.hostname=hostname
         self.type=type
@@ -34,7 +34,7 @@ class Instance(object):
         self.security_groups=None
         self.availability_zone=None
         self.image_uuid=None
-        self.creation_time=None
+        self.creation_time=0
         self.cloud_resource=None
         self.last_update_time=0
         self.tasked=False

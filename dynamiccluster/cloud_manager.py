@@ -1,6 +1,7 @@
-from dynamiccluster.utilities import get_unique_string, load_template_with_jinja, getLogger, hostname_lookup
+from dynamiccluster.utilities import get_unique_string, load_template_with_jinja, getLogger, hostname_lookup, unix_time
 from dynamiccluster.data import Instance
 import time
+import datetime
 from novaclient.v1_1 import client
 from novaclient.exceptions import NotFound
 import os
@@ -18,9 +19,9 @@ class CloudManager(object):
     def boot(self, **kwargs):
         assert 0, 'Must define boot'
     def destroy(self, **kwargs):
-        assert 0, 'Must define boot'
+        assert 0, 'Must define destroy'
     def update(self, **kwargs):
-        assert 0, 'Must define get'
+        assert 0, 'Must define destroy'
     
     
 class OpenStackManager(CloudManager):
@@ -65,7 +66,7 @@ class OpenStackManager(CloudManager):
                 instance = Instance(server.id)
                 instance.instance_name=server_name
                 instance.vcpu_number=flavor_obj.vcpus
-                instance.creation_time=server.created
+                instance.creation_time=unix_time(datetime.datetime.strptime(server.created, "%Y-%m-%dT%H:%M:%SZ"))
                 instance.key_name=self.config['key_name']
                 instance.flavor=self.config['flavor']
                 instance.security_groups=self.config['security_groups']
@@ -87,7 +88,7 @@ class OpenStackManager(CloudManager):
         try:
             server = self.__conn.servers.get(instance.uuid)
         except NotFound:
-            log.info("instance %s doesn't exist"%uuid)
+            log.info("instance %s doesn't exist"%instance.uuid)
             instance.state=Instance.Inexistent
             return instance
         except:
@@ -95,7 +96,7 @@ class OpenStackManager(CloudManager):
             raise CloudNotAvailableException()
         instance.state=self.get_state(server)
         log.debug("instance %s; Cloud Status: %s; State: %s" % (server.id,server.status, instance.state))
-        instance.creation_time=server.created
+        instance.creation_time=unix_time(datetime.datetime.strptime(server.created, "%Y-%m-%dT%H:%M:%SZ"))
         if instance.vcpu_number == 0:
             try:
                 instance.vcpu_number=self.__conn.flavors.get(server.flavor['id']).vcpus
@@ -111,10 +112,68 @@ class OpenStackManager(CloudManager):
                 instance.state=Instance.Starting
                 return instance
             instance.availability_zone=getattr(server,"OS-EXT-AZ:availability_zone")
-            instance.image_id=server.image['id']
+            instance.image_uuid=server.image['id']
             instance.ip=ip
         return instance
         
+    def list(self):
+        """ List all instances with the configured prefix """
+        try:
+            servers = self.__conn.servers.list(search_opts={"name":self.config['instance_name_prefix']+"-*"})
+            instances = []
+            for server in servers:
+                instance=Instance(server.id)
+                instance.instance_name=server.name
+                instance.creation_time=unix_time(datetime.datetime.strptime(server.created, "%Y-%m-%dT%H:%M:%SZ"))
+                instance.key_name=self.config['key_name']
+                instance.flavor=self.config['flavor']
+                instance.security_groups=self.config['security_groups']
+                instance.availability_zone=self.config['availability_zone']
+                instance.image_uuid=server.image['id']
+                instance.cloud_resource=self.name
+                instance.state=self.get_state(server)
+                if instance.state == Instance.Active:
+                    try:
+                        log.notice("ip1 %s"%server.addresses.values())
+                        log.notice("ip2 %s"%server.addresses.values()[0])
+                        log.notice("ip3 %s"%server.addresses.values()[0][0])
+                        instance.ip=server.addresses.values()[0][0]['addr']
+                        instance.public_dns_name=hostname_lookup(instance.ip)
+                    except:
+                        log.exception("Unable to get IP for instance %s"%instance)
+                    instance.availability_zone=getattr(server,"OS-EXT-AZ:availability_zone")
+                    instance.image_uuid=server.image['id']
+                os_flavor=self.__conn.flavors.get(server.flavor['id'])
+                instance.vcpu_number=os_flavor.vcpus
+                instances.append(instance)
+            return instances
+        except:
+            log.exception("Encounter an error when connecting to OpenStack.")
+            return []
+        
+    def destroy(self, instance):
+        """ Terminate an instance """
+        log.debug("Destroying instance %s (ip=%s)"%(instance.uuid,instance.ip))
+        try:
+            server = self.__conn.servers.get(instance.uuid)
+            self.__conn.servers.delete(server)
+            #vm.delete_time = datetime.datetime.utcnow()
+        except NotFound as ex:
+            log.debug("instance %s is already shut down"%(instance.uuid))
+            #vm.delete_time = datetime.datetime.utcnow()
+        except:
+            log.exception("Encounter an error when connecting to OpenStack.")
+            return False
+        # ensure the server's state is indeed changed to deleting or deleted
+        time.sleep(1)
+        try:
+            server = self.__conn.servers.get(vm.id)
+            if server.status == "ACTIVE":
+                time.sleep(2)
+        except:
+            pass
+        return True
+
     def get_flavor_id(self, flavor):
         try:
             flavor_list=self.__conn.flavors.list()
@@ -130,8 +189,8 @@ class OpenStackManager(CloudManager):
             return Instance.Error
         elif server.status == "ACTIVE":
             return Instance.Active
-        elif server.status == "DELETING" or getattr(server,"OS-EXT-STS:task_state") == "Deleting":
-            return Instance.Active
+        elif server.status == "DELETING" or server.status == "DELETED" or getattr(server,"OS-EXT-STS:task_state") == "Deleting":
+            return Instance.Deleting
         elif server.status != "ACTIVE" or getattr(server,"OS-EXT-STS:vm_state") != "active" or getattr(server,"OS-EXT-STS:task_state") is not None:
             return Instance.Starting
         log.info("instance %s is in a strange state: status %s, vm_state %s, task_state %s" % (server.id, server.status, getattr(server,"OS-EXT-STS:vm_state"), getattr(server,"OS-EXT-STS:task_state")))

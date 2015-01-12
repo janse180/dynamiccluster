@@ -6,7 +6,7 @@ from dynamiccluster.__version__ import version
 import os.path
 import logging
 from dynamiccluster.utilities import getLogger
-from dynamiccluster.server import NoClusterDefinedException
+from dynamiccluster.exceptions import NoClusterDefinedException
 
 # Gets the instance of the logger.
 log = getLogger("dynamiccluster")

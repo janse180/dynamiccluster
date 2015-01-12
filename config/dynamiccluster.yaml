@@ -5,6 +5,10 @@ dynamic-cluster:
   # max_down_time (in seconds) the worker node will be deleted if it has been down for this amount of time
   #  default is 480
   max_down_time: 480
+  # max_launch_time (in seconds) it takes some time for a VM to be built in the cloud, from when a request is sent to the cloud
+  #    if the VM is still not in a useful state after this amount of time, it will be destroyed and another attempt will be made
+  #  default is 1200
+  max_launch_time: 1200
   # cluster_poller_interval (in seconds) the time interval that Dynamic Cluster queries the cluster
   #  default is 10
   cluster_poller_interval: 10
