@@ -95,6 +95,9 @@ class AdminServer(threading.Thread):
     @route('/resource', method="GET")
     def get_resources():
         global server
+        res_list=server.resources
+        for res in res_list:
+            res.worker_nodes=[w for w in server.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name]
         return repr(server.resources)
     
     @route('/resource/:res', method="PUT")

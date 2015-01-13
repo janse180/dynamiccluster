@@ -20,6 +20,7 @@ import dynamiccluster.__version__ as version
 from dynamiccluster.cloud_manager import OpenStackManager, AWSManager
 from dynamiccluster.hooks import run_post_vm_provision_command
 from dynamiccluster.exceptions import NoClusterDefinedException, ServerInitializationError, NoCloudResourceException, WorkerNodeNotFoundException
+from dynamiccluster.resource_allocator import ResourceAllocator
 
 log = getLogger(__name__)
 
@@ -39,6 +40,7 @@ class Server(object):
         self.__result_queue=Queue()
         self.__workers=[]
         self.resources=[]
+        self.__resource_allocator=None
         
     def __sigTERMhandler(self, signum, frame):
         log.debug("Caught signal %d. Exiting" % signum)
@@ -97,7 +99,7 @@ class Server(object):
                             log.debug("instance %s is a worker node in cluster but it is not running any jobs and dead in the cloud, remove it"%instance.public_dns_name)
                             workernodes[0].instance=instance
                             workernodes[0].state=WorkerNode.Deleting
-                            self.__cluster.remove_node_from_cluster(workernodes[0])
+                            self.__cluster.remove_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation'])
                     else:
                         log.debug("instance %s is not a worker node in cluster and it is dead in the cloud, remove it"%instance.public_dns_name)
                         wn=WorkerNode(instance.instance_name)
@@ -163,7 +165,7 @@ class Server(object):
                     if "post_vm_provision_command" in self.config['dynamic-cluster']:
                         run_post_vm_provision_command(workernodes[0], self.config['dynamic-cluster']["post_vm_provision_command"])
                 elif workernodes[0].instance.state==Instance.Starting and time.time()-workernodes[0].instance.creation_time>self.config['dynamic-cluster']['max_launch_time']:
-                    log.debug("it takes too long for worker node %s to launch, kill it")
+                    log.debug("it takes too long for worker node %s to launch, kill it"%workernodes[0].hostname)
                     workernodes[0].instance.tasked=True
                     self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))  
                 elif workernodes[0].instance.state==Instance.Inexistent:
@@ -192,11 +194,11 @@ class Server(object):
                             run_post_add_node_command(workernodes[0], self.config['dynamic-cluster']["post_add_node_command"])
                     else:
                         log.debug("cannot add node %s to cluster, delete it"%workernodes[0].hostname)
-                        self.__cluster.remove_node(workernodes[0])
+                        self.__cluster.remove_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation'])
                 elif time.time()-workernodes[0].instance.creation_time>self.config['dynamic-cluster']['max_launch_time']:
                     log.debug("it takes too long for worker node %s to launch, kill it")
-                    wn.instance.tasked=True
-                    self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))                    
+                    workernodes[0].instance.tasked=True
+                    self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==workernodes[0].instance.cloud_resource][0], "instance": workernodes[0].instance}))                    
             else:
                 log.debug("failed to update config status for instance %s, try again later."%instance.uuid)
         elif result.type==Result.Destroy:
@@ -238,10 +240,27 @@ class Server(object):
                 log.debug("trying to hold worker node %s, wait for its jobs to finish" % wn.hostname)
             if wn.state==WorkerNode.Held:
                 log.debug("held worker node %s, delete it" % wn.hostname)
-                self.__cluster.remove_node(wn)
+                self.__cluster.remove_node(wn, self.config['cloud'][wn.instance.cloud_resource]['reservation'])
                 wn.instance.tasked=True
                 wn.state=WorkerNode.Deleting
                 self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))                    
+        for res in self.resources:
+            res.current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name])
+            if self.__auto and res.current_num<res.min_num and (not self.has_unfinished_worker_nodes()):
+                log.debug("resource %s has less worker nodes than min value, launch more")
+                task=Task(Task.Provision, {"resource": res, "number": res.min_num-res.current_num})
+                self.__task_queue.put(task)
+        if self.__auto and (not self.has_unfinished_worker_nodes()):
+            tasks=self.__resource_allocator.allocate(self.info.queued_jobs, self.resources, self.info.worker_nodes)
+            for task in tasks:
+                self.__task_queue.put(task)
+                    
+    def has_unfinished_worker_nodes(self):
+        """
+        check if there is any worker node in starting/configuring state
+        """
+        list=[w for w in self.info.worker_nodes if w.state==WorkerNode.Starting or w.state==WorkerNode.Configuring]
+        return len(list)>0
         
     def start(self):
         log.info("Starting Dynamic Cluster v" + version.version)
@@ -265,6 +284,8 @@ class Server(object):
         adminServer=AdminServer(self)
         adminServer.daemon = True
         adminServer.start()
+        
+        self.__resource_allocator=ResourceAllocator()
         
         worker_num=1
         if "worker_number" in self.config['dynamic-cluster']:

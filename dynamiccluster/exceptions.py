@@ -9,3 +9,9 @@ class NoCloudResourceException(BaseException):
 
 class WorkerNodeNotFoundException(BaseException):
     pass
+
+class CloudNotAvailableException(BaseException):
+    pass
+
+class FlavorNotFoundException(BaseException):
+    pass

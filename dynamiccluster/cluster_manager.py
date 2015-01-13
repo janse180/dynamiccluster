@@ -68,9 +68,9 @@ class TorqueManager(ClusterManager):
                         the_node.state=WorkerNode.Held
                     else:
                         the_node.state=WorkerNode.Holding
-                if "down" in node_state:
+                elif "down" in node_state:
                     the_node.state=WorkerNode.Error
-                if node_state == "busy":
+                elif node_state == "busy":
                     the_node.state=WorkerNode.Busy
                 elif node_state == "idle":
                     the_node.state=WorkerNode.Idle
@@ -220,8 +220,12 @@ class TorqueManager(ClusterManager):
         time.sleep(2)
         return True
     
-    def remove_node(self, wn):
+    def remove_node(self, wn, reservation):
         log.debug("removing node %s from cluster" % wn)
+        if "queue" in reservation and reservation['queue'] is not None:
+            torque_utils.release_res_for_node(wn, reservation['queue'], self.config['releaseres_command'])
+        if "account" in reservation and reservation['account'] is not None:
+            torque_utils.release_res_for_node(wn, reservation['account'], self.config['releaseres_command'])
         torque_utils.hold_node_in_torque(wn, self.config['pbsnodes_command'])
         #check if the VM is drained in MAUI
         retry=60
@@ -241,3 +245,8 @@ class TorqueManager(ClusterManager):
     def hold_node(self, wn):
         log.debug("hold node %s in cluster" % wn)
         torque_utils.hold_node_in_torque(wn, self.config['pbsnodes_command'])
+
+
+class SGEManager(ClusterManager):
+    def __init__(self, config):
+        ClusterManager.__init__(self, config, {"sge":True})

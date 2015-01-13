@@ -237,3 +237,20 @@ def set_res_for_node(wn, res_type, res_name, setres_command):
     except:
         log.exception("Problem running %s, unexpected error" % string.join(set_res, " "))
         return
+
+def release_res_for_node(wn, res_name, releaseres_command):
+    log.debug("releasing reservation %s for node %s"%(res_name, wn.hostname))
+    release_node = releaseres_command.format(wn.hostname, res_name)
+    log.debug("cmd %s"%release_node)
+    try:
+        sp = subprocess.Popen(release_node, shell=True,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+#           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
+        if returncode != 0:
+            log.error("Error releasing reservation for node %s, return code %s"%(wn.hostname, returncode))
+            log.debug("cmd_out %s cmd_err %s"%(cmd_out, cmd_err))
+    except:
+        log.exception("Problem running %s, unexpected error" % release_node)
+        return

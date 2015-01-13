@@ -1,5 +1,6 @@
 from dynamiccluster.utilities import get_unique_string, load_template_with_jinja, getLogger, hostname_lookup, unix_time
 from dynamiccluster.data import Instance
+from dynamiccluster.exceptions import CloudNotAvailableException, FlavorNotFoundException
 import time
 import datetime
 from novaclient.v1_1 import client
@@ -201,8 +202,3 @@ class AWSManager(CloudManager):
         CloudManager.__init__(self, config)
 
 
-class CloudNotAvailableException(BaseException):
-    pass
-
-class FlavorNotFoundException(BaseException):
-    pass
