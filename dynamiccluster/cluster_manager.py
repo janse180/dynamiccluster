@@ -4,9 +4,11 @@ from dynamiccluster.data import WorkerNode
 from dynamiccluster.data import ProcRequirement
 from dynamiccluster.data import Job
 import dynamiccluster.torque_utils as torque_utils
+import dynamiccluster.sge_utils as sge_utils
 import xml.etree.ElementTree as ET
 import time
-from dynamiccluster.utilities import getLogger
+import datetime
+from dynamiccluster.utilities import getLogger, unix_time
 
 log = getLogger(__name__)
 
@@ -250,3 +252,108 @@ class TorqueManager(ClusterManager):
 class SGEManager(ClusterManager):
     def __init__(self, config):
         ClusterManager.__init__(self, config, {"sge":True})
+
+    def update_worker_nodes(self, worker_node_list):
+        self.state["sge"], qhost_output=sge_utils.wn_query(self.config['qhost_command'])
+        try:
+            root = ET.fromstring(qhost_output)
+            for raw_node in root.findall('host'):
+                if raw_node.get("name")=="global":
+                    continue
+                node = {"name":raw_node.get("name"), "jobs":[]}
+                for child in raw_node:
+                    if child.tag == "hostvalue":
+                        node[child.get("name")]=child.text
+                    elif child.tag == "job":
+                        node["jobs"].append(child.get("name"))
+                #if not config.node_property or ('properties' in node and node['properties'].find(config.node_property)>-1):
+                #print worker_node_list
+                nodes=[n for n in worker_node_list if n.hostname==node["name"]]
+                the_node=None
+                if len(nodes)>0:
+                    the_node=nodes[0]
+                else:
+                    the_node=WorkerNode(node["name"])
+                    the_node.num_proc=int(node["num_proc"])
+                    worker_node_list.append(the_node)
+                #if "offline" in node["state"].lower():
+                #    if node_state == "drained":
+                #        the_node.state=WorkerNode.Held
+                #    else:
+                #        the_node.state=WorkerNode.Holding
+                #elif "down" in node_state:
+                #    the_node.state=WorkerNode.Error
+                #elif node_state == "busy":
+                #    the_node.state=WorkerNode.Busy
+                #elif node_state == "idle":
+                #    the_node.state=WorkerNode.Idle
+                if len(node["jobs"])>0:
+                    the_node.jobs=node["jobs"]
+                    the_node.state=WorkerNode.Busy
+                else:
+                    the_node.jobs=None
+                    the_node.state=WorkerNode.Idle
+                the_node.extra_attributes={"arch_string": node["arch_string"], 
+                                             "m_socket": node["m_socket"],
+                                             "load_avg": node["load_avg"],
+                                             "mem_total": node["mem_total"],
+                                             "mem_used": node["mem_used"],
+                                             "swap_total": node["swap_total"],
+                                             "swap_used": node["swap_used"],
+                                             "m_core": node["m_core"], "m_thread": node["m_thread"]
+                                             }
+            if len(nodes)>0:
+                log.notice("nodes %d" % len(nodes))
+            return 
+        except:
+            log.exception("can't parse qhost output: %s"%qhost_output)
+            return 
+
+    def query_jobs(self):
+        self.state["sge"], qstat_output=sge_utils.job_query(self.config['qstat_command'])
+        log.notice("qstat output %s" % qstat_output)
+        try:
+            queued_jobs = []
+            running_jobs = []
+            num_of_jobs = 0
+            total_number_of_idle_jobs = 0
+    
+            root = ET.fromstring(qstat_output)
+            raw_queued_jobs={}
+            for raw_job in root.findall('job_info/job_list'):
+                job = {"job_state": raw_job.get("state")}
+                for child in raw_job:
+                    log.notice("child %s" % child)
+                    if "name" in child.attrib:
+                        job[child.tag+"."+child.get("name")]=child.text
+                    else:
+                        job[child.tag]=child.text
+                job_id=job["JB_job_number"]
+                log.notice("raw_job %s" % job)
+                if job['job_state']=="pending": # and (len(self.config['queue_to_monitor'])==0 or job['queue'] in self.config['queue_to_monitor']):
+                    total_number_of_idle_jobs+=1
+                    if self.config['queued_job_number_to_display'] < 1 or (self.config['queued_job_number_to_display'] > 0 and num_of_jobs<self.config['queued_job_number_to_display']):
+                        new_job=Job(job_id)
+                        new_job.name=job["JB_name"]
+                        new_job.owner=job["JB_owner"]
+                        new_job.queue=job["queue_name"]
+                        new_job.priority=job["JAT_prio"]
+                        if "hard_request.h_rt" in job:
+                            new_job.requested_walltime=job["hard_request.h_rt"]
+                        if "hard_request.mem_free" in job:
+                            new_job.requested_mem=job["hard_request.mem_free"]
+                        new_job.requested_proc=ProcRequirement()
+                        new_job.state=Job.Queued
+                        new_job.creation_time=unix_time(datetime.datetime.strptime(job['JB_submission_time'], "%Y-%m-%dT%H:%M:%S"))
+                        queued_jobs.append(new_job)
+                        num_of_jobs=+1
+                elif job['job_state']=="running":
+                    new_job=Job(job_id)
+                    new_job.state=Job.Running
+                    running_jobs.append(new_job)
+            log.notice("queued_jobs %s" % queued_jobs)
+            return queued_jobs, total_number_of_idle_jobs
+        except:
+            log.exception("cannot parse qstat output: %s" % qstat_output)
+            return [], 0
+    

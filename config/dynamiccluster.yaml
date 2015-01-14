@@ -86,6 +86,48 @@ cluster:
     
     # the command to unset account_string in a node
     releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | grep {1} | awk '{{print $3}}' `
+  
+cluster:
+  type: sge
+  config:
+    queue_to_monitor: 
+      - short
+      - long
+    # the number of queued jobs to keep in memory for display
+    queued_job_number_to_display: 30
+    # the command to query jobs in the queue
+    #  it must return data in XML format (-xml)
+    qstat_command: /opt/sge/bin/lx-amd64/qstat -xml -r
+    
+    # the command to run qhost command with differnt options
+    #  it takes two parameters to query only one host, "-h hostname"
+    qhost_command: /opt/sge/bin/lx-amd64/qhost -j -xml {0} {1}
+    
+    # the command to add a new node to torque
+    #  it takes one parameter which is the hostname of the VM
+    add_node_command: /usr/bin/qmgr -c "create node {0}"
+    
+    # the command to check node state in maui
+    #  it takes one parameter which is the hostname of the VM
+    check_node_command: /usr/bin/checknode {0}
+    
+    # the command to delete node from torque
+    #  it takes one parameter which is the hostname of the VM
+    remove_node_command: /usr/bin/qmgr -c "delete node {0}"
+    
+    # the command to set a property to node in torque
+    #  it takes three parameters {0} is the hostname of the VM, {1} is the name of the property, {2} is the value of the property
+    set_node_command: /usr/bin/qmgr -c "set node {0} {1} {2} {3}"
+    
+    # the command to get jobs' priorities
+    diagnose_p_command: /usr/bin/diagnose -p
+    
+    # the command to set account_string to a node
+    setres_command: /usr/bin/setres {0} {1} {2}
+    
+    # the command to unset account_string in a node
+    releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | grep {1} | awk '{{print $3}}' `
+  
     
 cloud:
   os-res:
