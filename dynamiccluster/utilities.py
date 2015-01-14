@@ -55,3 +55,16 @@ def unix_time(dt):
     epoch = datetime.datetime.utcfromtimestamp(0)
     delta = dt - epoch
     return delta.days*86400+delta.seconds+delta.microseconds/1e6
+
+def get_aws_vcpu_num_by_instance_type(type):
+    if type.endswith(".2xlarge"):
+        return 8
+    elif type.endswith(".xlarge"):
+        return 4
+    elif type.endswith(".large"):
+        return 2
+    elif type.endswith(".4xlarge"):
+        return 16
+    elif type.endswith(".8xlarge"):
+        return 32
+    return 1

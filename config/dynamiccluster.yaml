@@ -88,7 +88,7 @@ cluster:
     releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | grep {1} | awk '{{print $3}}' `
     
 cloud:
-  res-name:
+  os-res:
     type: openstack
     reservation:
       queue:
@@ -110,5 +110,29 @@ cloud:
       availability_zone:
       instance_name_prefix:
       userdata_file:
-      
+  aws-res:
+    type: aws
+    reservation:
+      queue:
+      account:
+      property:
+    quantity:
+      min:
+      max:
+    priority:
+    config:
+      access_key_id:
+      secret_access_key:
+      image_id:
+      instance_type:
+      region_name: ap-southeast-2
+      key_name:
+      security_groups:
+      availability_zone:
+      instance_name_prefix:
+      userdata_file:
+      validate_certs: False
+      spot_bid:
+      #proxy:
+      #proxy_port:
       

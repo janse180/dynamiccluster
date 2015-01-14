@@ -71,9 +71,11 @@ function showWorkerNode(hostname) {
 					'<tr><th>Last Task Result</th><td>'+data.instance.last_task_result+'</td></tr>';
 		}		
 		htmlstr+='<tr><th>Extra Attributes</th><td>&nbsp;</td></tr>';
-		$.each(data.extra_attributes, function( key, val ) {
-			htmlstr+='<tr><th>'+key+'</th><td>'+val.replace(/,/g,", ")+'</td></tr>';
-		});
+		if (data.extra_attributes) {
+			$.each(data.extra_attributes, function( key, val ) {
+				htmlstr+='<tr><th>'+key+'</th><td>'+val.replace(/,/g,", ")+'</td></tr>';
+			});
+		}
 		htmlstr+='</table>';
 		$('#modalMain').html(htmlstr);
 		$('#infoDialog').modal('show');

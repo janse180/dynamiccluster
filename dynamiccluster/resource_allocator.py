@@ -8,7 +8,7 @@ class ResourceAllocator(object):
         self.allocate=self.simple_allocate
         
     def simple_allocate(self, jobs, resources, worker_nodes):
-        log.debug("allocate new worker nodes to queued jobs")
+        #log.debug("allocate new worker nodes to queued jobs")
         for job in jobs:
             pass
         return []

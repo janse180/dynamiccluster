@@ -2,7 +2,8 @@ import multiprocessing
 import signal
 from dynamiccluster.utilities import getLogger
 from Queue import Empty
-from dynamiccluster.cloud_manager import OpenStackManager, AWSManager
+from dynamiccluster.os_manager import OpenStackManager
+from dynamiccluster.aws_manager import AWSManager
 from dynamiccluster.config_checker import PortChecker
 
 log = getLogger(__name__)

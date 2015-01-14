@@ -17,7 +17,8 @@ from dynamiccluster.worker import Task
 from dynamiccluster.worker import Result
 from dynamiccluster.data import WorkerNode
 import dynamiccluster.__version__ as version
-from dynamiccluster.cloud_manager import OpenStackManager, AWSManager
+from dynamiccluster.os_manager import OpenStackManager
+from dynamiccluster.aws_manager import AWSManager
 from dynamiccluster.hooks import run_post_vm_provision_command
 from dynamiccluster.exceptions import NoClusterDefinedException, ServerInitializationError, NoCloudResourceException, WorkerNodeNotFoundException
 from dynamiccluster.resource_allocator import ResourceAllocator
@@ -60,7 +61,7 @@ class Server(object):
                 flavor_id=cloud_manager.get_flavor_id(res.config['flavor'])
                 res.config['flavor_id']=flavor_id
             elif res.type.lower()=="aws":
-                cloud_manager=AWSManager(res.name, res.config, max_attempt_time=1)
+                cloud_manager=AWSManager(res.name, res.config)
             instance_list=cloud_manager.list()
             for instance in instance_list:
                 if instance.state==Instance.Active:
@@ -90,7 +91,7 @@ class Server(object):
                     wn.num_proc=wn.instance.vcpu_number
                     wn.type=self.config['cloud'][instance.cloud_resource]['type']
                     self.info.worker_nodes.append(wn)
-                else:
+                elif instance.state!=Instance.Inexistent:
                     workernodes=[w for w in self.info.worker_nodes if w.hostname==instance.public_dns_name]
                     if len(workernodes)>0:
                         if workernodes[0].state==Busy:
@@ -247,7 +248,7 @@ class Server(object):
         for res in self.resources:
             res.current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name])
             if self.__auto and res.current_num<res.min_num and (not self.has_unfinished_worker_nodes()):
-                log.debug("resource %s has less worker nodes than min value, launch more")
+                log.debug("resource %s has less worker nodes than min value, launch more" % res.name)
                 task=Task(Task.Provision, {"resource": res, "number": res.min_num-res.current_num})
                 self.__task_queue.put(task)
         if self.__auto and (not self.has_unfinished_worker_nodes()):
