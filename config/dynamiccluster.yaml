@@ -101,19 +101,19 @@ cluster:
     
     # the command to run qhost command with differnt options
     #  it takes two parameters to query only one host, "-h hostname"
-    qhost_command: /opt/sge/bin/lx-amd64/qhost -j -xml {0} {1}
+    qhost_command: /opt/sge/bin/lx-amd64/qhost -q -j -xml {0} {1}
     
     # the command to add a new node to torque
     #  it takes one parameter which is the hostname of the VM
-    add_node_command: /usr/bin/qmgr -c "create node {0}"
+    add_node_command: /opt/sge/bin/lx-amd64/qconf -aattr hostgroup hostlist {0} @cloud
     
-    # the command to check node state in maui
-    #  it takes one parameter which is the hostname of the VM
-    check_node_command: /usr/bin/checknode {0}
+    # the command to enable/disable all queue in a node
+    #  it takes two parameters which are -e(enable)/-d(disable) and the hostname of the VM
+    qmod_command: /opt/sge/bin/lx-amd64/qmod {0} *@{1}
     
     # the command to delete node from torque
     #  it takes one parameter which is the hostname of the VM
-    remove_node_command: /usr/bin/qmgr -c "delete node {0}"
+    remove_node_command: /opt/sge/bin/lx-amd64/qconf -de {0}
     
     # the command to set a property to node in torque
     #  it takes three parameters {0} is the hostname of the VM, {1} is the name of the property, {2} is the value of the property

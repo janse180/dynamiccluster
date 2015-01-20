@@ -266,8 +266,12 @@ class SGEManager(ClusterManager):
                         node[child.get("name")]=child.text
                     elif child.tag == "job":
                         node["jobs"].append(child.get("name"))
+                    elif child.tag == "queue":
+                        for grand_child in child:
+                            node['queue.'+grand_child.get("name")]=grand_child.text
                 #if not config.node_property or ('properties' in node and node['properties'].find(config.node_property)>-1):
                 #print worker_node_list
+                log.notice("node %s" % node)
                 nodes=[n for n in worker_node_list if n.hostname==node["name"]]
                 the_node=None
                 if len(nodes)>0:
@@ -276,23 +280,18 @@ class SGEManager(ClusterManager):
                     the_node=WorkerNode(node["name"])
                     the_node.num_proc=int(node["num_proc"])
                     worker_node_list.append(the_node)
-                #if "offline" in node["state"].lower():
-                #    if node_state == "drained":
-                #        the_node.state=WorkerNode.Held
-                #    else:
-                #        the_node.state=WorkerNode.Holding
-                #elif "down" in node_state:
-                #    the_node.state=WorkerNode.Error
-                #elif node_state == "busy":
-                #    the_node.state=WorkerNode.Busy
-                #elif node_state == "idle":
-                #    the_node.state=WorkerNode.Idle
                 if len(node["jobs"])>0:
                     the_node.jobs=node["jobs"]
                     the_node.state=WorkerNode.Busy
                 else:
                     the_node.jobs=None
-                    the_node.state=WorkerNode.Idle
+                    if "queue.state_string" in node and node["queue.state_string"] is not None:
+                        if "d" in node["queue.state_string"]:
+                            the_node.state=WorkerNode.Held
+                        if "E" in node["queue.state_string"] or "u" in node["queue.state_string"]:
+                            the_node.state=WorkerNode.Error
+                    else:
+                        the_node.state=WorkerNode.Idle
                 the_node.extra_attributes={"arch_string": node["arch_string"], 
                                              "m_socket": node["m_socket"],
                                              "load_avg": node["load_avg"],
@@ -357,3 +356,13 @@ class SGEManager(ClusterManager):
             log.exception("cannot parse qstat output: %s" % qstat_output)
             return [], 0
     
+    def add_node(self, node, reservation):
+        sge_utils.add_node_to_sge(wn, self.config['add_node_command'])
+        
+    def hold_node(self, wn):
+        log.debug("hold node %s in cluster" % wn)
+        sge_utils.hold_node_in_sge(wn, self.config['qmod_command'])
+
+    def remove_node(self, wn, reservation):
+        log.debug("removing node %s from cluster" % wn)
+        sge_utils.remove_node_from_sge(wn, self.config['remove_node_command'])

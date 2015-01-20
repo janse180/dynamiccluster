@@ -52,3 +52,46 @@ def job_query(qstat_command):
     if query_out.strip()=="":
         return True, ""
     return True, query_out
+
+def add_node_to_sge(wn, add_node_command):
+    log.debug("adding %s to sge"%wn.hostname)
+    cmd=add_node_command.format(wn.hostname)
+    log.notice("cmd %s"%cmd)
+    try:
+        add_node = shlex.split(cmd)
+        sp = subprocess.Popen(add_node, shell=False,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+#           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
+        if returncode != 0:
+            log.error("Error adding node %s to sge, returncode %s"% (wn.hostname, returncode))
+            log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+            return False
+        return True
+    except:
+        log.exception("Problem running %s, unexpected error" % cmd)
+        return False
+
+def hold_node_in_sge(wn, qmod_command):
+    cmd=qmod_command.format("-d", wn.hostname)
+    try:
+        hold_node = shlex.split(cmd)
+        sp = subprocess.Popen(hold_node, shell=False,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+    except:
+        log.exception("Problem running %s, unexpected error" % cmd)
+        return 
+
+def remove_node_from_sge(wn, remove_node_command):
+    try:
+        remove_node = shlex.split(remove_node_command.format(wn.hostname))
+        sp = subprocess.Popen(remove_node, shell=False,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+    except:
+        log.exception("Problem running %s, unexpected error" % string.join(remove_node, " "))
+        return 

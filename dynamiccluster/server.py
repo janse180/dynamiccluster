@@ -188,8 +188,8 @@ class Server(object):
                 if result.data['ready']==True:
                     log.debug("workernode %s is ready, add it to cluster"%workernodes[0].hostname)
                     if self.__cluster.add_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation']):
-                        workernodes[0].state=WorkerNode.Idle
-                        workernodes[0].state_start_time=time.time()
+                        #workernodes[0].state=WorkerNode.Idle
+                        #workernodes[0].state_start_time=time.time()
                         # run post add_node_command here!
                         if "post_add_node_command" in self.config['dynamic-cluster']:
                             run_post_add_node_command(workernodes[0], self.config['dynamic-cluster']["post_add_node_command"])

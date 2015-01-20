@@ -18,9 +18,9 @@ def run_post_vm_provision_command(wn, command):
         log.exception("Problem running %s, unexpected error" % string.join(post_action, " "))
         return 
 
-def post_add_node_action(wn, command):
+def post_config_node_command(wn, command):
     cmd=command.format(wn.hostname, wn.instance.ip)
-    log.debug("post add-node command (%s): %s"%(wn.hostname,cmd))
+    log.debug("post config-node command (%s): %s"%(wn.hostname,cmd))
     try:
         post_action = shlex.split(cmd)
         sp = subprocess.Popen(post_action, shell=False,

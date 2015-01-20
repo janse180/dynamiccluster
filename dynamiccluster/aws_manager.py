@@ -61,7 +61,7 @@ class AWSManager(CloudManager):
                     return None
                 reservation = self.conn.run_instances(self.config['image_id'], key_name=self.config['key_name'], max_count=1, min_count=1, user_data=userdata_string, security_groups=self.config['security_groups'], instance_type=self.config['instance_type'], placement=self.config['availability_zone']) 
                 for server in reservation.instances:
-                    server.add_tag('name', server_name)
+                    server.add_tag('Name', server_name)
                     instance = Instance(server.id)
                     instance.instance_name=server_name
                     instance.vcpu_number=get_aws_vcpu_num_by_instance_type(server.instance_type)
@@ -109,11 +109,11 @@ class AWSManager(CloudManager):
     def list(self):
         """ List all instances with the configured prefix """
         try:
-            servers = self.conn.get_only_instances(filters={"tag:name":self.config['instance_name_prefix']+"-*"})
+            servers = self.conn.get_only_instances(filters={"tag:Name":self.config['instance_name_prefix']+"-*"})
             instances = []
             for server in servers:
                 instance=Instance(server.id)
-                instance.instance_name=server.tags['name']
+                instance.instance_name=server.tags['Name']
                 instance.creation_time=unix_time(datetime.datetime.strptime(server.launch_time, "%Y-%m-%dT%H:%M:%S.%fZ"))
                 instance.key_name=server.key_name
                 instance.flavor=server.instance_type
