@@ -65,6 +65,7 @@ class TorqueManager(ClusterManager):
                     worker_node_list.append(the_node)
                 node_state, s = torque_utils.check_node(the_node, self.config['check_node_command'])
                 the_node.time_in_current_state=s
+                the_node.state_start_time=0
                 if "offline" in node["state"].lower():
                     if node_state == "drained":
                         the_node.state=WorkerNode.Held
@@ -278,7 +279,9 @@ class SGEManager(ClusterManager):
                     the_node=nodes[0]
                 else:
                     the_node=WorkerNode(node["name"])
-                    the_node.num_proc=int(node["num_proc"])
+                    the_node.state_start_time=time.time()
+                    if node["num_proc"].isdigit():
+                        the_node.num_proc=int(node["num_proc"])
                     worker_node_list.append(the_node)
                 if len(node["jobs"])>0:
                     the_node.jobs=node["jobs"]
@@ -288,7 +291,7 @@ class SGEManager(ClusterManager):
                     if "queue.state_string" in node and node["queue.state_string"] is not None:
                         if "d" in node["queue.state_string"]:
                             the_node.state=WorkerNode.Held
-                        if "E" in node["queue.state_string"] or "u" in node["queue.state_string"]:
+                        if "E" in node["queue.state_string"] or ("u" in node["queue.state_string"] and the_node.state!=WorkerNode.Configuring):
                             the_node.state=WorkerNode.Error
                     else:
                         the_node.state=WorkerNode.Idle
@@ -356,8 +359,8 @@ class SGEManager(ClusterManager):
             log.exception("cannot parse qstat output: %s" % qstat_output)
             return [], 0
     
-    def add_node(self, node, reservation):
-        sge_utils.add_node_to_sge(wn, self.config['add_node_command'])
+    def add_node(self, wn, reservation):
+        return sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-aattr", reservation['account'])
         
     def hold_node(self, wn):
         log.debug("hold node %s in cluster" % wn)
@@ -365,4 +368,5 @@ class SGEManager(ClusterManager):
 
     def remove_node(self, wn, reservation):
         log.debug("removing node %s from cluster" % wn)
+        sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-dattr", reservation['account'])
         sge_utils.remove_node_from_sge(wn, self.config['remove_node_command'])

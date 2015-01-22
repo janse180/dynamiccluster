@@ -103,9 +103,9 @@ cluster:
     #  it takes two parameters to query only one host, "-h hostname"
     qhost_command: /opt/sge/bin/lx-amd64/qhost -q -j -xml {0} {1}
     
-    # the command to add a new node to torque
-    #  it takes one parameter which is the hostname of the VM
-    add_node_command: /opt/sge/bin/lx-amd64/qconf -aattr hostgroup hostlist {0} @cloud
+    # the command to modify hostgroup in sge, used when adding or removing a node
+    #  it takes three parameters which are -aattr/-dattr, the hostname of the VM and the group name
+    hostgroup_command: /opt/sge/bin/lx-amd64/qconf {0} hostgroup hostlist {1} {2}
     
     # the command to enable/disable all queue in a node
     #  it takes two parameters which are -e(enable)/-d(disable) and the hostname of the VM

@@ -21,7 +21,8 @@ class PortChecker(ConfigChecker):
         try:
             s.connect((address, self.port))
             log.debug(  "Connected to %s on port %s" % (address, self.port))
-            s.shutdown(2)
+            s.shutdown(socket.SHUT_RDWR)
+            s.close()
             return True
         except socket.error, e:
             log.debug( "Connection to %s on port %s failed: %s" % (address, self.port, e))

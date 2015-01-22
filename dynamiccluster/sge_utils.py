@@ -53,9 +53,9 @@ def job_query(qstat_command):
         return True, ""
     return True, query_out
 
-def add_node_to_sge(wn, add_node_command):
-    log.debug("adding %s to sge"%wn.hostname)
-    cmd=add_node_command.format(wn.hostname)
+def update_hostgroup(wn, hostgroup_command, option, group_name):
+    log.debug("update hostgroup %s for %s with option %s" % (group_name, wn.hostname, option))
+    cmd=hostgroup_command.format(option, wn.hostname, group_name)
     log.notice("cmd %s"%cmd)
     try:
         add_node = shlex.split(cmd)
@@ -65,7 +65,7 @@ def add_node_to_sge(wn, add_node_command):
         returncode = sp.returncode
 #           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
         if returncode != 0:
-            log.error("Error adding node %s to sge, returncode %s"% (wn.hostname, returncode))
+            log.error("Error updating hostgroup %s for %s with option %s in sge, returncode %s"% (group_name, wn.hostname, option, returncode))
             log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
             return False
         return True

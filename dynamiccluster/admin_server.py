@@ -103,10 +103,10 @@ class AdminServer(threading.Thread):
     @route('/resource/:res', method="PUT")
     def add_instace_to_res(res):
         num_string = request.query.num
-        log.debug("launch %s instance in %s" % (num_string,res))
         number=1
         if len(num_string)>0 and num_string.isdigit():
             number=int(num_string)
+        log.debug("launch %s instance in %s" % (number,res))
         global server
         try:
             server.launch_new_instance(res, number)

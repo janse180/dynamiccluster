@@ -16,7 +16,7 @@ class WorkerNode(object):
         self.instance=None
         
     def __repr__(self):
-        if self.time_in_current_state==0 and self.state_start_time>0:
+        if self.state_start_time>0:
             self.__dict__.update({'time_in_current_state':time.time()-self.state_start_time})
         return json.dumps(self, default=lambda o: o.__dict__)
         
