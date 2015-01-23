@@ -149,7 +149,7 @@ class Server(object):
                 log.debug("failed to start instances, try again later.")
         elif result.type==Result.UpdateCloudState:
             instance=result.data['instance']
-            workernodes=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.uuid==instance.uuid]
+            workernodes=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.instance_name==instance.instance_name]
             if len(workernodes)==0:
                 log.error("instance %s is not in the current list. something is wrong" % instance.uuid)
                 return
@@ -190,7 +190,7 @@ class Server(object):
                 log.debug("failed to update cloud state for instance %s, try again later."%instance.uuid)
         elif result.type==Result.UpdateConfigStatus:
             instance=result.data['instance']
-            workernodes=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.uuid==instance.uuid]
+            workernodes=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.instance_name==instance.instance_name]
             if len(workernodes)==0:
                 log.error("instance %s is not in the current list. something is wrong" % instance.uuid)
                 return
@@ -218,7 +218,7 @@ class Server(object):
                 log.debug("failed to update config status for instance %s, try again later."%instance.uuid)
         elif result.type==Result.Destroy:
             instance=result.data['instance']
-            workernodes=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.uuid==instance.uuid]
+            workernodes=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.instance_name==instance.instance_name]
             if len(workernodes)==0:
                 log.error("instance %s is not in the current list. something is wrong" % instance.uuid)
                 return

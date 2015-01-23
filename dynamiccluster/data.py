@@ -21,7 +21,7 @@ class WorkerNode(object):
         return json.dumps(self, default=lambda o: o.__dict__)
         
 class Instance(object):
-    Inexistent, Starting, Active, Deleting, Error, Unknown = range(6)
+    Inexistent, Pending, Starting, Active, Deleting, Error, Unknown = range(7)
     def __init__(self, uuid):
         self.uuid=uuid
         self.instance_name=None
@@ -39,6 +39,9 @@ class Instance(object):
         self.last_update_time=0
         self.tasked=False
         self.last_task_result=-1
+        self.spot_id=None
+        self.spot_state=None
+        self.spot_price=0
     def __repr__(self):
         return json.dumps(self, default=lambda o: o.__dict__)
 

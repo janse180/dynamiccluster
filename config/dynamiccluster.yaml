@@ -175,6 +175,7 @@ cloud:
       userdata_file:
       validate_certs: False
       spot_bid:
+      spot_timeout:
       #proxy:
       #proxy_port:
       

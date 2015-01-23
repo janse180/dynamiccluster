@@ -84,10 +84,11 @@ function showWorkerNode(hostname) {
 
 function convertCloudState(s){
 	if (s==0) return "Inexistent";
-	if (s==1) return "Starting";
-	if (s==2) return "Active";
-	if (s==3) return "Deleting";
-	if (s==4) return "Error";
+	if (s==1) return "Pending";
+	if (s==2) return "Starting";
+	if (s==3) return "Active";
+	if (s==4) return "Deleting";
+	if (s==5) return "Error";
 	return "Unknown";
 }
 function convertWNState(s) { 

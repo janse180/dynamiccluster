@@ -5,6 +5,7 @@ from Queue import Empty
 from dynamiccluster.os_manager import OpenStackManager
 from dynamiccluster.aws_manager import AWSManager
 from dynamiccluster.config_checker import PortChecker
+from dynamiccluster.exceptions import CloudNotSupportedException, ConfigCheckerNotSupportedException
 
 log = getLogger(__name__)
 
@@ -59,8 +60,9 @@ class Worker(multiprocessing.Process):
                         self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':task.data['instance'], "ready": checker.check(task.data['instance'].ip)}))
                     elif task.type==Task.Destroy:
                         cloud_manager=self.__get_cloud_manager(task.data['resource'])
-                        cloud_manager.destroy(instance=task.data['instance'])
-                        self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':task.data['instance']}))
+                        if cloud_manager.destroy(instance=task.data['instance']):
+                            self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':task.data['instance']}))
+                        self.__result_queue.put(Result(task.type, Result.Failed, task.data))
                     elif task.type==Task.Quit:
                         log.debug("got quit task, existing...")
                         break
@@ -91,8 +93,3 @@ class Worker(multiprocessing.Process):
         else:
             raise ConfigCheckerNotSupportedException("Config checker %s is not supported" % config.keys()[0])
         
-class CloudNotSupportedException(BaseException):
-    pass
-
-class ConfigCheckerNotSupportedException(BaseException):
-    pass

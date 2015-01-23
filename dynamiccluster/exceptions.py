@@ -15,3 +15,10 @@ class CloudNotAvailableException(BaseException):
 
 class FlavorNotFoundException(BaseException):
     pass
+
+class CloudNotSupportedException(BaseException):
+    pass
+
+class ConfigCheckerNotSupportedException(BaseException):
+    pass
+
