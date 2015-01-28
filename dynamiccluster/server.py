@@ -202,14 +202,15 @@ class Server(object):
                     if self.config['cluster']['type']=="torque":
                         log.debug("workernode %s is ready, add it to cluster"%workernodes[0].hostname)
                         if self.__cluster.add_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation']):
-                            #workernodes[0].state=WorkerNode.Idle
-                            #workernodes[0].state_start_time=time.time()
                             # run post add_node_command here!
                             if "post_add_node_command" in self.config['dynamic-cluster']:
                                 run_post_add_node_command(workernodes[0], self.config['dynamic-cluster']["post_add_node_command"])
                         else:
                             log.debug("cannot add node %s to cluster, delete it"%workernodes[0].hostname)
                             self.__cluster.remove_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation'])
+                    else:
+                        workernodes[0].state=WorkerNode.Idle
+                        workernodes[0].state_start_time=time.time()
                 elif time.time()-workernodes[0].instance.creation_time>self.config['dynamic-cluster']['max_launch_time']:
                     log.debug("it takes too long for worker node %s to launch, kill it")
                     workernodes[0].instance.tasked=True
@@ -414,7 +415,12 @@ class Server(object):
             raise WorkerNodeNotFoundException()
         if workernodes[0].state==WorkerNode.Busy and not forced:
             raise WorkerNodeIsBusyException()
-        elif (workernodes[0].state==WorkerNode.Busy and forced) or workernodes[0].state==WorkerNode.Idle:
+        elif workernodes[0].state==WorkerNode.Error:
+            self.__cluster.remove_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation'])
+            workernodes[0].instance.tasked=True
+            workernodes[0].state=WorkerNode.Deleting
+            self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==workernodes[0].instance.cloud_resource][0], "instance": workernodes[0].instance}))                    
+        elif (workernodes[0].state==WorkerNode.Busy and forced) or workernodes[0].state!=WorkerNode.Busy:
             self.__cluster.hold_node(workernodes[0])
             workernodes[0].state=WorkerNode.Holding
 

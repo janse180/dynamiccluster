@@ -41,7 +41,7 @@ class AWSManager(CloudManager):
             #                    10)
             kwargs=dict(aws_access_key_id=self.config['access_key_id'], aws_secret_access_key=self.config['secret_access_key'],
                 validate_certs=self.config['validate_certs'])
-            if self.config['proxy']:
+            if 'proxy' in self.config:
                 kwargs['proxy']=self.config['proxy']
                 kwargs['proxy_port']=self.config['proxy_port']
             self.__conn = ec2.connect_to_region(self.config['region_name'], **kwargs)
@@ -70,6 +70,7 @@ class AWSManager(CloudManager):
                     if len(req)==0:
                         log.error("unable to create spot request")
                         raise CloudNotAvailableException()
+                    time.sleep(1)
                     self.conn.create_tags([req[0].id], {'Name':server_name})
                     instance = Instance(None)
                     instance.instance_name=server_name
