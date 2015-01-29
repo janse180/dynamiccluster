@@ -19,7 +19,7 @@ from dynamiccluster.data import WorkerNode
 import dynamiccluster.__version__ as version
 from dynamiccluster.os_manager import OpenStackManager
 from dynamiccluster.aws_manager import AWSManager
-from dynamiccluster.hooks import run_post_vm_provision_command
+from dynamiccluster.hooks import run_post_command
 from dynamiccluster.exceptions import NoClusterDefinedException, ServerInitializationError, NoCloudResourceException, WorkerNodeNotFoundException
 from dynamiccluster.resource_allocator import ResourceAllocator
 
@@ -160,11 +160,12 @@ class Server(object):
                 workernodes[0].instance.last_update_time=time.time()
                 if workernodes[0].instance.state==Instance.Active:
                     workernodes[0].hostname=workernodes[0].instance.public_dns_name
+                    workernodes[0].num_proc=workernodes[0].instance.vcpu_number
                     workernodes[0].state=WorkerNode.Configuring
                     workernodes[0].state_start_time=time.time()
                     # run post-provision script here!
                     if "post_vm_provision_command" in self.config['dynamic-cluster']:
-                        run_post_vm_provision_command(workernodes[0], self.config['dynamic-cluster']["post_vm_provision_command"])
+                        run_post_command(workernodes[0], self.config['dynamic-cluster']["post_vm_provision_command"])
                     if self.config['cluster']['type']=="sge":
                         log.debug("workernode %s is provisioned, add it to cluster"%workernodes[0].hostname)
                         if self.__cluster.add_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation']):
@@ -172,7 +173,7 @@ class Server(object):
                             #workernodes[0].state_start_time=time.time()
                             # run post add_node_command here!
                             if "post_add_node_command" in self.config['dynamic-cluster']:
-                                run_post_add_node_command(workernodes[0], self.config['dynamic-cluster']["post_add_node_command"])
+                                run_post_command(workernodes[0], self.config['dynamic-cluster']["post_add_node_command"])
                         else:
                             log.debug("cannot add node %s to cluster, delete it"%workernodes[0].hostname)
                             self.__cluster.remove_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation'])
@@ -185,6 +186,8 @@ class Server(object):
                 elif workernodes[0].instance.state==Instance.Inexistent:
                     log.debug("instance %s is gone, remove it from the list" % instance)
                     self.info.worker_nodes.remove(workernodes[0])
+                    if "post_vm_provision_command" in self.config['dynamic-cluster']:
+                        run_post_command(workernodes[0], self.config['dynamic-cluster']["post_vm_provision_command"])
                 log.debug("updated workernode %s"%workernodes[0])
             else:
                 log.debug("failed to update cloud state for instance %s, try again later."%instance.uuid)
@@ -204,7 +207,7 @@ class Server(object):
                         if self.__cluster.add_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation']):
                             # run post add_node_command here!
                             if "post_add_node_command" in self.config['dynamic-cluster']:
-                                run_post_add_node_command(workernodes[0], self.config['dynamic-cluster']["post_add_node_command"])
+                                run_post_command(workernodes[0], self.config['dynamic-cluster']["post_add_node_command"])
                         else:
                             log.debug("cannot add node %s to cluster, delete it"%workernodes[0].hostname)
                             self.__cluster.remove_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation'])
@@ -257,6 +260,8 @@ class Server(object):
             elif wn.state==WorkerNode.Held:
                 log.debug("held worker node %s, delete it" % wn.hostname)
                 self.__cluster.remove_node(wn, self.config['cloud'][wn.instance.cloud_resource]['reservation'])
+                if "post_remove_node_command" in self.config['dynamic-cluster']:
+                    run_post_command(workernodes[0], self.config['dynamic-cluster']["post_remove_node_command"])
                 wn.instance.tasked=True
                 wn.state=WorkerNode.Deleting
                 self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))                    

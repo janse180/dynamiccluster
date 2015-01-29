@@ -369,4 +369,5 @@ class SGEManager(ClusterManager):
     def remove_node(self, wn, reservation):
         log.debug("removing node %s from cluster" % wn)
         sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-dattr", reservation['account'])
+        time.sleep(.5)
         sge_utils.remove_node_from_sge(wn, self.config['remove_node_command'])

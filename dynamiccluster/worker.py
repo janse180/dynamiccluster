@@ -62,7 +62,8 @@ class Worker(multiprocessing.Process):
                         cloud_manager=self.__get_cloud_manager(task.data['resource'])
                         if cloud_manager.destroy(instance=task.data['instance']):
                             self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':task.data['instance']}))
-                        self.__result_queue.put(Result(task.type, Result.Failed, task.data))
+                        else:
+                            self.__result_queue.put(Result(task.type, Result.Failed, task.data))
                     elif task.type==Task.Quit:
                         log.debug("got quit task, existing...")
                         break
