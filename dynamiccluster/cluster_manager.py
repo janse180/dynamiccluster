@@ -285,15 +285,23 @@ class SGEManager(ClusterManager):
                     worker_node_list.append(the_node)
                 if len(node["jobs"])>0:
                     the_node.jobs=node["jobs"]
+                    if the_node.state!=WorkerNode.Busy:
+                        the_node.state_start_time=time.time()
                     the_node.state=WorkerNode.Busy
                 else:
                     the_node.jobs=None
                     if "queue.state_string" in node and node["queue.state_string"] is not None:
                         if "d" in node["queue.state_string"]:
+                            if the_node.state!=WorkerNode.Held:
+                                the_node.state_start_time=time.time()
                             the_node.state=WorkerNode.Held
                         if "E" in node["queue.state_string"] or ("u" in node["queue.state_string"] and the_node.state!=WorkerNode.Configuring):
+                            if the_node.state!=WorkerNode.Error:
+                                the_node.state_start_time=time.time()
                             the_node.state=WorkerNode.Error
                     else:
+                        if the_node.state!=WorkerNode.Idle:
+                            the_node.state_start_time=time.time()
                         the_node.state=WorkerNode.Idle
                 the_node.extra_attributes={"arch_string": node["arch_string"], 
                                              "m_socket": node["m_socket"],
@@ -360,7 +368,10 @@ class SGEManager(ClusterManager):
             return [], 0
     
     def add_node(self, wn, reservation):
-        return sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-aattr", reservation['account'])
+        if sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-aattr", reservation['account']):
+            sge_utils.set_slots(wn, self.config['set_slots_command'], reservation['queue'])
+            return True
+        return false
         
     def hold_node(self, wn):
         log.debug("hold node %s in cluster" % wn)
@@ -369,5 +380,7 @@ class SGEManager(ClusterManager):
     def remove_node(self, wn, reservation):
         log.debug("removing node %s from cluster" % wn)
         sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-dattr", reservation['account'])
+        time.sleep(.5)
+        sge_utils.unset_slots(wn, self.config['unset_slots_command'], reservation['queue'])
         time.sleep(.5)
         sge_utils.remove_node_from_sge(wn, self.config['remove_node_command'])

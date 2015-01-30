@@ -115,19 +115,13 @@ cluster:
     #  it takes one parameter which is the hostname of the VM
     remove_node_command: /opt/sge/bin/lx-amd64/qconf -de {0}
     
-    # the command to set a property to node in torque
-    #  it takes three parameters {0} is the hostname of the VM, {1} is the name of the property, {2} is the value of the property
-    set_node_command: /usr/bin/qmgr -c "set node {0} {1} {2} {3}"
+    # the command to set slots in a queue for a node
+    #  it takes one parameter which are the number of slots, queue name and the hostname of the VM
+    set_slots_command: /opt/sge/bin/lx-amd64/qconf -rattr queue slots {0} {1}@{2}
     
-    # the command to get jobs' priorities
-    diagnose_p_command: /usr/bin/diagnose -p
-    
-    # the command to set account_string to a node
-    setres_command: /usr/bin/setres {0} {1} {2}
-    
-    # the command to unset account_string in a node
-    releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | grep {1} | awk '{{print $3}}' `
-  
+    # the command to unset slots in a queue for a node before removing this node
+    #  it takes one parameter which are queue name and the hostname of the VM
+    unset_slots_command: /opt/sge/bin/lx-amd64/qconf -purge queue slots {0}@{1}
     
 cloud:
   os-res:

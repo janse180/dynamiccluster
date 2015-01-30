@@ -103,3 +103,34 @@ def remove_node_from_sge(wn, remove_node_command):
     except:
         log.exception("Problem running %s, unexpected error" % string.join(remove_node, " "))
         return 
+
+def set_slots(wn, set_slots_command, queue):
+    log.debug("setting slots for %s@%s" % (queue, wn.hostname))
+    try:
+        cmd = shlex.split(set_slots_command.format(wn.num_proc, queue, wn.hostname))
+        sp = subprocess.Popen(cmd, shell=False,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+        if returncode != 0:
+            log.error("Error when setting slots for %s@%s, returncode %s"% (queue, wn.hostname, returncode))
+            log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+    except:
+        log.exception("Problem running %s, unexpected error" % string.join(cmd, " "))
+        return 
+
+def unset_slots(wn, unset_slots_command, queue):
+    log.debug("unsetting slots for %s@%s" % (queue, wn.hostname))
+    try:
+        cmd = shlex.split(unset_slots_command.format(queue, wn.hostname))
+        sp = subprocess.Popen(cmd, shell=False,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+        if returncode != 0:
+            log.error("Error when unsetting slots for %s@%s, returncode %s"% (queue, wn.hostname, returncode))
+            log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+    except:
+        log.exception("Problem running %s, unexpected error" % string.join(cmd, " "))
+        return 
+    
