@@ -107,7 +107,7 @@ function initJobView(){
 	  $('#wntab').removeClass('active');
 	  $('#jtab').addClass('active');
 	  $('#rtab').removeClass('active');
-	  $("#main").html('<div class="panel panel-default"><div class="panel-heading">Jobs</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Job Id</th><th>Name</th><th>State</th><th>Priority</th><th>Owner</th><th>Queue</th><th>Account String</th><th>Req. Walltime</th><th>Req. Mem</th><th>Req. Proc</th><th>Creation Time</th></tr></thead><tbody id="jtable"></tbody></table></div></div>');
+	  $("#main").html('<div class="panel panel-default"><div class="panel-heading">Jobs</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Job Id</th><th>Name</th><th>State</th><th>Priority</th><th>Owner</th><th>Queue</th><th>Account</th><th>Property</th><th>Req. Walltime</th><th>Req. Mem</th><th>Req. Proc</th><th>Creation Time</th></tr></thead><tbody id="jtable"></tbody></table></div></div>');
 	  $.getJSON( "/job", function( data ) {
 		  var items = [];
 		  var nodes = [];
@@ -115,7 +115,7 @@ function initJobView(){
 		  $.each( data, function( key, val ) {
 			  //alert(val.id);
 			  //console.log(val);
-			  $('#jtable').append('<tr><th>'+val.jobid+'</th><td>'+val.name+'</td><td>'+convertJobState(val.state)+'</td><td>'+val.priority+'</td><td>'+val.owner+'</td><td>'+val.queue+'</td><td>'+val.account_string+'</td><td>'+val.requested_walltime+'</td><td>'+val.requested_mem+'</td><td>'+convertProc(val.requested_proc)+'</td><td>'+moment.unix(val.creation_time).format("YYYY-M-D h:mm:ss")+'</td><td>A</td></tr>'); 
+			  $('#jtable').append('<tr><th>'+val.jobid+'</th><td>'+val.name+'</td><td>'+convertJobState(val.state)+'</td><td>'+val.priority+'</td><td>'+val.owner+'</td><td>'+val.queue+'</td><td>'+val.account+'</td><td>'+val.property+'</td><td>'+val.requested_walltime+'</td><td>'+val.requested_mem+'</td><td>'+convertProc(val)+'</td><td>'+moment.unix(val.creation_time).format("YYYY-M-D h:mm:ss")+'</td><td>A</td></tr>'); 
 		  });
 		});
 }
@@ -127,7 +127,7 @@ function convertJobState(s) {
 }
 
 function convertProc(p) {
-	return p.num_cores+"cores*"+p.num_nodes+"nodes";
+	return p.requested_cores+"cores("+p.cores_per_node+"pn)";
 }
 
 function initResourceView() {

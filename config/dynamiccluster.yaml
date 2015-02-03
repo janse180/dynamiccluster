@@ -123,6 +123,12 @@ cluster:
     #  it takes one parameter which are queue name and the hostname of the VM
     unset_slots_command: /opt/sge/bin/lx-amd64/qconf -purge queue slots {0}@{1}
     
+    # the command to run qconf -spl command
+    qconf_spl_command: /opt/sge/bin/lx-amd64/qconf -spl
+
+    # the command to run qconf -sp command to get allocation rule
+    qconf_sp_command: /opt/sge/bin/lx-amd64/qconf -sp {0} | grep allocation_rule | awk '{{print $2}}'
+    
 cloud:
   os-res:
     type: openstack

@@ -43,7 +43,7 @@ class Worker(multiprocessing.Process):
         log.debug("worker %s started"%self.__id)
         while self.__running:
             try:
-                log.notice("worker %s waiting for task, %s"%(self.__id,self.__running))
+                log.notice("worker %s waiting for task, is running? %s"%(self.__id,self.__running))
                 try:
                     task=self.__task_queue.get(timeout=1)
                     log.debug("got task %s"%task)

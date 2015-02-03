@@ -1,6 +1,7 @@
 import json
 import time
 import inspect
+import sys
 
 class WorkerNode(object):
     Inexistent, Starting, Configuring, Idle, Busy, Error, Deleting, Holding, Held = range(9)
@@ -54,20 +55,14 @@ class Job(object):
         self.owner=None
         self.state=None
         self.queue=None
-        self.account_string=None
-        self.requested_proc=None
+        self.property=None
+        self.account=None
+        self.requested_cores=1
+        self.cores_per_node=1
         self.requested_mem=None
         self.requested_walltime=None
         self.creation_time=0
         self.extra_attributes=None
-    def __repr__(self):
-        return json.dumps(self, default=lambda o: o.__dict__)
-
-class ProcRequirement(object):
-    def __init__(self, num_nodes=1, num_cores=1, property=None):
-        self.num_nodes=num_nodes
-        self.num_cores=num_cores
-        self.property=property
     def __repr__(self):
         return json.dumps(self, default=lambda o: o.__dict__)
 
@@ -85,6 +80,8 @@ class CloudResource(object):
         self.min_num=kwargs['quantity']['min']
         self.max_num=kwargs['quantity']['max']
         self.current_num=0
+        self.cores_per_node=0
+        self.proposed_allocation=None
         self.config=kwargs['config']
         if 'queue' in kwargs['reservation']:
             self.reservation_queue=kwargs['reservation']['queue']

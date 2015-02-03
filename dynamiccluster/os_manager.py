@@ -160,12 +160,12 @@ class OpenStackManager(CloudManager):
             pass
         return True
 
-    def get_flavor_id(self, flavor):
+    def get_flavor_details(self, flavor):
         try:
             flavor_list=self.__conn.flavors.list()
             for f in flavor_list:
                 if f.name==flavor:
-                    return f.id
+                    return f.id, f.vcpus
         except:
             log.exception("Encounter an error when getting flavor list.")
         raise FlavorNotFoundException()

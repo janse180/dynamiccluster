@@ -96,10 +96,20 @@ class AdminServer(threading.Thread):
     def get_resources():
         global server
         res_list=server.resources
+        if len(res_list)==0:
+            abort(404, "resource %s not found" % res_name)
         for res in res_list:
             res.worker_nodes=[w for w in server.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name]
         return repr(server.resources)
-    
+ 
+    @route('/resource/:res_name', method="GET")
+    def get_resource(res_name):
+        global server
+        res_list=[r for r in server.resources if r.name==res_name]
+        for res in res_list:
+            res.worker_nodes=[w for w in server.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name]
+        return repr(res_list[0])
+   
     @route('/resource/:res', method="PUT")
     def add_instace_to_res(res):
         num_string = request.query.num

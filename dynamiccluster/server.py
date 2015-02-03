@@ -8,7 +8,7 @@ from Queue import Empty
 from multiprocessing import Process, Queue, cpu_count
 from dynamiccluster.admin_server import AdminServer
 import dynamiccluster.cluster_manager as cluster_manager
-from dynamiccluster.utilities import getLogger, excepthook
+from dynamiccluster.utilities import getLogger, excepthook, get_aws_vcpu_num_by_instance_type
 from dynamiccluster.data import ClusterInfo
 from dynamiccluster.data import CloudResource
 from dynamiccluster.data import Instance
@@ -58,10 +58,10 @@ class Server(object):
             cloud_manager=None
             if res.type.lower()=="openstack":
                 cloud_manager=OpenStackManager(res.name, res.config, max_attempt_time=1)
-                flavor_id=cloud_manager.get_flavor_id(res.config['flavor'])
-                res.config['flavor_id']=flavor_id
+                res.config['flavor_id'], res.cores_per_node=cloud_manager.get_flavor_details(res.config['flavor'])
             elif res.type.lower()=="aws":
                 cloud_manager=AWSManager(res.name, res.config)
+                res.cores_per_node=get_aws_vcpu_num_by_instance_type(res.config['instance_type'])
             instance_list=cloud_manager.list()
             for instance in instance_list:
                 if instance.state==Instance.Active:
@@ -113,6 +113,8 @@ class Server(object):
                         self.info.worker_nodes.append(wn)
                         wn.instance.tasked=True
                         self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))                    
+            res.current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name])
+
         
     def query_and_process(self):
         log.debug("query thread started")
@@ -271,8 +273,8 @@ class Server(object):
                     log.error("cannot find resource %s"%wn.instance.cloud_resource)
                     return
                 log.notice("update current_num of res %s" % res[0].name)
-                res[0].current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res[0].name])
-                if res[0].current_num>res[0].min_num:
+                current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res[0].name] and w.state!=WorkerNode.Deleting)
+                if current_num>res[0].min_num:
                     log.debug("worker node %s has been idle for too long and the resource has more nodes than minimal requirement, delete it" % wn.hostname)
                     self.__cluster.remove_node(wn, self.config['cloud'][wn.instance.cloud_resource]['reservation'])
                     wn.instance.tasked=True
@@ -286,20 +288,28 @@ class Server(object):
                 self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))                    
         for res in self.resources:
             res.current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name])
-            if self.__auto and res.current_num<res.min_num and (not self.has_unfinished_worker_nodes()):
+            if self.__auto and res.current_num<res.min_num and (not self.has_starting_worker_nodes(res.name)):
                 log.debug("resource %s has less worker nodes than min value, launch more" % res.name)
                 task=Task(Task.Provision, {"resource": res, "number": res.min_num-res.current_num})
                 self.__task_queue.put(task)
-        if self.__auto and (not self.has_unfinished_worker_nodes()):
-            tasks=self.__resource_allocator.allocate(self.info.queued_jobs, self.resources, self.info.worker_nodes)
-            for task in tasks:
-                self.__task_queue.put(task)
+        if self.__auto:
+            free_resources=[]
+            for res in self.resources:
+                if not self.has_starting_worker_nodes(res.name):
+                    free_resources.append(res)
+            try:
+                tasks=self.__resource_allocator.allocate(self.info.queued_jobs, free_resources, self.info.worker_nodes)
+                for task in tasks:
+                    log.debug("tasks from resource allocator: %s"%task)
+                    self.__task_queue.put(task)
+            except:
+                log.exception("Error allocating new resources to pending jobs")
                     
-    def has_unfinished_worker_nodes(self):
+    def has_starting_worker_nodes(self, res_name):
         """
         check if there is any worker node in starting/configuring state
         """
-        list=[w for w in self.info.worker_nodes if w.state==WorkerNode.Starting or w.state==WorkerNode.Configuring]
+        list=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.cloud_resource==res_name and (w.state==WorkerNode.Starting or w.state==WorkerNode.Configuring)]
         return len(list)>0
         
     def start(self):

@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 from dynamiccluster.data import WorkerNode
-from dynamiccluster.data import ProcRequirement
 from dynamiccluster.data import Job
 import dynamiccluster.torque_utils as torque_utils
 import dynamiccluster.sge_utils as sge_utils
@@ -151,7 +150,6 @@ class TorqueManager(ClusterManager):
                     strs=job_dict["Resource_List.nodes"].split(":")
                     num_cores=1
                     num_nodes=1
-                    property=None
                     if len(strs)>=1:
                         if strs[0].isdigit():
                             num_nodes=int(strs[0])
@@ -163,14 +161,17 @@ class TorqueManager(ClusterManager):
                             #for i in range(int(nums[0])):
                             #    vcpus.append(int(nums[1]))
                         else:
-                            property=strs[1]
+                            job.property=strs[1]
                     if len(strs)>2:
-                        property=strs[2]
-                    job.requested_proc=ProcRequirement(num_nodes, num_cores, property)
+                        job.property=strs[2]
+                    job.requested_cores=num_nodes*num_cores
+                    job.cores_per_node=num_cores
                 elif "Resource_List.ncpus" in job_dict:
-                    job.requested_proc=ProcRequirement(1, int(job_dict["Resource_List.ncpus"]))
-                elif "Resource_List.nodes" not in job_dict and "Resource_List.ncpus" not in job_dict:
-                    job.requested_proc=ProcRequirement()
+                    job.cores_per_node=int(job_dict["Resource_List.ncpus"])
+                #elif "Resource_List.nodes" not in job_dict and "Resource_List.ncpus" not in job_dict:
+                #    job.requested_proc=ProcRequirement()
+                if "Account_Name" in job_dict:
+                    job.account=job_dict["Account_Name"]
                 job.requested_mem=job_dict["Resource_List.mem"]
                 job.state=Job.Queued
                 job.creation_time=job_dict['ctime']
@@ -322,6 +323,12 @@ class SGEManager(ClusterManager):
     def query_jobs(self):
         self.state["sge"], qstat_output=sge_utils.job_query(self.config['qstat_command'])
         log.notice("qstat output %s" % qstat_output)
+        pe_names=sge_utils.get_pes(self.config['qconf_spl_command'])
+        if len(pe_names)>0:
+            pes={}
+            for pe in pe_names.split('\n'):
+                pes[pe]=sge_utils.get_pe_allocation_rule(self.config['qconf_sp_command'], pe)
+            log.notice("pes %s" % pes)
         try:
             queued_jobs = []
             running_jobs = []
@@ -334,7 +341,10 @@ class SGEManager(ClusterManager):
                 job = {"job_state": raw_job.get("state")}
                 for child in raw_job:
                     log.notice("child %s" % child)
-                    if "name" in child.attrib:
+                    if child.tag=="requested_pe":
+                        job["requested_pe.name"]=child.get("name")
+                        job["requested_pe"]=child.text
+                    elif "name" in child.attrib:
                         job[child.tag+"."+child.get("name")]=child.text
                     else:
                         job[child.tag]=child.text
@@ -346,13 +356,21 @@ class SGEManager(ClusterManager):
                         new_job=Job(job_id)
                         new_job.name=job["JB_name"]
                         new_job.owner=job["JB_owner"]
-                        new_job.queue=job["queue_name"]
-                        new_job.priority=job["JAT_prio"]
+                        if "hard_req_queue" in job:
+                            new_job.queue=job["hard_req_queue"]
+                        new_job.priority=float(job["JAT_prio"])
                         if "hard_request.h_rt" in job:
                             new_job.requested_walltime=job["hard_request.h_rt"]
                         if "hard_request.mem_free" in job:
                             new_job.requested_mem=job["hard_request.mem_free"]
-                        new_job.requested_proc=ProcRequirement()
+                        if "requested_pe" in job:
+                            new_job.requested_cores=int(job["requested_pe"])
+                            if pes[job["requested_pe.name"]] in ["$round_robin", "$fill_up"]:
+                                new_job.cores_per_node=0
+                            elif pes[job["requested_pe.name"]] == "$pe_slots":
+                                new_job.cores_per_node=new_job.requested_cores
+                            elif pes[job["requested_pe.name"]].isdigit():
+                                new_job.cores_per_node=int(pes[job["requested_pe.name"]])
                         new_job.state=Job.Queued
                         new_job.creation_time=unix_time(datetime.datetime.strptime(job['JB_submission_time'], "%Y-%m-%dT%H:%M:%S"))
                         queued_jobs.append(new_job)

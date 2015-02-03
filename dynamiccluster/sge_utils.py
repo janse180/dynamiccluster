@@ -133,4 +133,36 @@ def unset_slots(wn, unset_slots_command, queue):
     except:
         log.exception("Problem running %s, unexpected error" % string.join(cmd, " "))
         return 
+
+def get_pes(qconf_spl_command):
+    log.notice("getting all pes")
+    try:
+        cmd = shlex.split(qconf_spl_command)
+        sp = subprocess.Popen(cmd, shell=False,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+        if returncode != 0:
+            log.error("Error when getting all pes, returncode %s"% (returncode))
+            log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+            return ""
+        return cmd_out.strip()
+    except:
+        log.exception("Problem running %s, unexpected error" % qconf_spl_command)
+        return ""
     
+def get_pe_allocation_rule(qconf_sp_command, pe):
+    log.notice("getting allocation rule for pe %s"%pe)
+    try:
+        sp = subprocess.Popen(qconf_sp_command.format(pe), shell=True,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+        if returncode != 0:
+            log.error("Error when getting allocation rule for pe %s, returncode %s"% (pe, returncode))
+            log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+            return ""
+        return cmd_out.strip()
+    except:
+        log.exception("Problem running %s, unexpected error" % qconf_sp_command.format(pe))
+        return ""
