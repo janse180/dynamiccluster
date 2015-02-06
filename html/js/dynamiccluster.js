@@ -82,16 +82,17 @@ function showWorkerNode(hostname) {
 	});
 }
 
-function convertCloudState(s){
+function convertCloudState(s){ //Inexistent, Pending, Starting, Active, Configured, Deleting, Error, Unknown = range(8)
 	if (s==0) return "Inexistent";
 	if (s==1) return "Pending";
 	if (s==2) return "Starting";
 	if (s==3) return "Active";
-	if (s==4) return "Deleting";
-	if (s==5) return "Error";
+	if (s==4) return "Configured";
+	if (s==5) return "Deleting";
+	if (s==6) return "Error";
 	return "Unknown";
 }
-function convertWNState(s) { 
+function convertWNState(s) { //Inexistent, Starting, Configuring, Idle, Busy, Error, Deleting, Holding, Held
 	if (s==1) return "Starting";
 	if (s==2) return "Configuring";
 	if (s==3) return "Idle";

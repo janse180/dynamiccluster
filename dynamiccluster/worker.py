@@ -57,7 +57,8 @@ class Worker(multiprocessing.Process):
                         self.__result_queue.put(Result(Result.UpdateCloudState, Result.Success, {'instance':instance}))
                     elif task.type==Task.UpdateConfigStatus:
                         checker=self.__get_config_checker(task.data['checker'])
-                        self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':task.data['instance'], "ready": checker.check(task.data['instance'].ip)}))
+                        instance=checker.check(instance=task.data['instance'])
+                        self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':instance}))
                     elif task.type==Task.Destroy:
                         cloud_manager=self.__get_cloud_manager(task.data['resource'])
                         if cloud_manager.destroy(instance=task.data['instance']):

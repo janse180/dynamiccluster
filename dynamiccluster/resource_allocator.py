@@ -10,9 +10,10 @@ class ResourceAllocator(object):
         
     def simple_allocate(self, jobs, resources, worker_nodes):
         #log.debug("allocate new worker nodes to queued jobs")
-        jobs.sort(key=lambda job: job.priority, reverse=True)
+        pending_jobs=[j for j in jobs if j.priority!=-1]
+        pending_jobs.sort(key=lambda job: job.priority, reverse=True)
         tasks=[]
-        for job in jobs:
+        for job in pending_jobs:
             avail_resources=[r for r in resources]
             if job.queue is not None:
                 avail_resources=[r for r in avail_resources if r.reservation_queue is None or r.reservation_queue==job.queue]

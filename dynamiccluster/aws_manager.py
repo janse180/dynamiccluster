@@ -1,5 +1,5 @@
 from dynamiccluster.utilities import get_unique_string, load_template_with_jinja, getLogger, hostname_lookup, unix_time, get_aws_vcpu_num_by_instance_type
-from dynamiccluster.data import Instance
+from dynamiccluster.data import Instance, WorkerNode
 from dynamiccluster.exceptions import CloudNotAvailableException, FlavorNotFoundException
 from dynamiccluster.cloud_manager import CloudManager
 import time
@@ -116,7 +116,7 @@ class AWSManager(CloudManager):
             log.notice("Updating spot request %s..." % (instance.spot_id))
             try:
                 requests = self.conn.get_all_spot_instance_requests(request_ids=[instance.spot_id])
-                if len(requests)==0 or requests[0].state in ["closed", "canceled", "failed"]:
+                if len(requests)==0 or requests[0].state in ["closed", "cancelled", "failed"]:
                     instance.state=WorkerNode.Inexistent
                     return instance
                 else:

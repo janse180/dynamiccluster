@@ -286,24 +286,26 @@ class SGEManager(ClusterManager):
                     worker_node_list.append(the_node)
                 if len(node["jobs"])>0:
                     the_node.jobs=node["jobs"]
-                    if the_node.state!=WorkerNode.Busy:
-                        the_node.state_start_time=time.time()
-                    the_node.state=WorkerNode.Busy
                 else:
                     the_node.jobs=None
-                    if "queue.state_string" in node and node["queue.state_string"] is not None:
-                        if "d" in node["queue.state_string"]:
-                            if the_node.state!=WorkerNode.Held:
-                                the_node.state_start_time=time.time()
-                            the_node.state=WorkerNode.Held
-                        if "E" in node["queue.state_string"] or ("u" in node["queue.state_string"] and the_node.state!=WorkerNode.Configuring):
-                            if the_node.state!=WorkerNode.Error:
-                                the_node.state_start_time=time.time()
-                            the_node.state=WorkerNode.Error
-                    else:
+                if "queue.state_string" in node and node["queue.state_string"] is not None:
+                    if "d" in node["queue.state_string"]:
+                        if the_node.state!=WorkerNode.Held:
+                            the_node.state_start_time=time.time()
+                        the_node.state=WorkerNode.Held
+                    if "E" in node["queue.state_string"] or ("u" in node["queue.state_string"] and the_node.state!=WorkerNode.Configuring):
+                        if the_node.state!=WorkerNode.Error:
+                            the_node.state_start_time=time.time()
+                        the_node.state=WorkerNode.Error
+                else:
+                    if the_node.jobs is None:
                         if the_node.state!=WorkerNode.Idle:
                             the_node.state_start_time=time.time()
                         the_node.state=WorkerNode.Idle
+                    else:
+                        if the_node.state!=WorkerNode.Busy:
+                            the_node.state_start_time=time.time()
+                        the_node.state=WorkerNode.Busy
                 the_node.extra_attributes={"arch_string": node["arch_string"], 
                                              "m_socket": node["m_socket"],
                                              "load_avg": node["load_avg"],
@@ -358,7 +360,8 @@ class SGEManager(ClusterManager):
                         new_job.owner=job["JB_owner"]
                         if "hard_req_queue" in job:
                             new_job.queue=job["hard_req_queue"]
-                        new_job.priority=float(job["JAT_prio"])
+                        if float(job["JAT_prio"])>0:
+                            new_job.priority=float(job["JAT_prio"])
                         if "hard_request.h_rt" in job:
                             new_job.requested_walltime=job["hard_request.h_rt"]
                         if "hard_request.mem_free" in job:
@@ -377,6 +380,7 @@ class SGEManager(ClusterManager):
                         num_of_jobs=+1
                 elif job['job_state']=="running":
                     new_job=Job(job_id)
+                    new_job.priority=float(job["JAT_prio"])
                     new_job.state=Job.Running
                     running_jobs.append(new_job)
             log.notice("queued_jobs %s" % queued_jobs)

@@ -22,7 +22,7 @@ class WorkerNode(object):
         return json.dumps(self, default=lambda o: o.__dict__)
         
 class Instance(object):
-    Inexistent, Pending, Starting, Active, Deleting, Error, Unknown = range(7)
+    Inexistent, Pending, Starting, Active, Configured, Deleting, Error, Unknown = range(8)
     def __init__(self, uuid):
         self.uuid=uuid
         self.instance_name=None
