@@ -9,9 +9,9 @@ server = None
 
 class AdminServer(threading.Thread):
     
-    @route('/admin', method='GET')
+    @route('/dashboard', method='GET')
     def get_admin_index():
-        log.debug("get admin index page")
+        log.debug("get dashboard index page")
         return static_file("index.html", root='html')
 
     @route('/js/:page', method='GET')

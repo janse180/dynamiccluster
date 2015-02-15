@@ -149,7 +149,7 @@ function initResourceView() {
 			  if (val.reservation_queue) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Queue</span>&nbsp;'+val.reservation_queue+'&nbsp;&nbsp;';
 			  if (val.reservation_property) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Property</span>&nbsp;'+val.reservation_property+'&nbsp;&nbsp;';
 			  if (val.reservation_account) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Account</span>&nbsp;'+val.reservation_account+'&nbsp;&nbsp;';
-			  htmlstr+='</h5></div>';
+			  htmlstr+='<button type="button" class="btn btn-success btn-sm" id="addbutton'+val.name+'" data-toggle="modal" data-target="#addResDialog" data-whatever="'+val.name+'">Add</button></h5></div>';
 			  percentage=parseInt(val.current_num*100/val.max_num);
 			  htmlstr+='<div class="progress"><div class="progress-bar" role="progressbar" aria-valuenow="'+percentage+'" aria-valuemin="0" aria-valuemax="100" style="width: '+percentage+'%;">'+percentage+'%</div></div></div>';
 			  htmlstr+='<table class="table table-striped table-condensed"><thead><tr><th>Hostname</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>Jobs</th></tr></thead><tbody>';
@@ -166,5 +166,47 @@ function initResourceView() {
 		  $("#main").html(htmlstr);
 		});
 }
+
+function addResource(res_name, num){
+	console.log(res_name+" "+n);
+	$.ajax({
+        type: "PUT",
+        url: "/resource/"+res_name+"?num="+num,
+        success: function(response) {
+	    console.log(response);
+	    if (response["success"]==true){
+	    	$("#successalert").show();
+	    	initResourceView();
+	    }else
+	    	$("#failalert").show();
+        }
+	});
+	
+}
+
+$('#addResDialog').on('show.bs.modal', function (event) {
+	  var button = $(event.relatedTarget); // Button that triggered the modal
+	  var res_name = button.data('whatever'); // Extract info from data-* attributes
+	  // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+	  // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+	  var modal = $(this);
+	  modal.find('.modal-title').text('Launch new instances for resource ' + res_name);
+	  $('#resname').val(res_name);
+	  modal.find('.modal-body input:text').css({ "border":""});
+	  modal.find('.modal-body input:text').tooltip('hide');
+});
+$('#addResDialog').find('.modal-body button').click(function() {
+	inputbox=$('#addResDialog').find('.modal-body input:text');
+    //console.log(inputbox);
+    n=inputbox.val();
+    //console.log($.isNumeric(n));
+    if ($.isNumeric(n)) {
+	    $('#addResDialog').modal('hide');
+	    addResource($('#resname').val(), n);
+    }else{
+    	inputbox.css({ "border": '#FF0000 1px solid'});
+    	inputbox.tooltip('show');
+    }
+});
 
 initWNView();

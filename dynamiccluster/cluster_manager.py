@@ -391,9 +391,8 @@ class SGEManager(ClusterManager):
     
     def add_node(self, wn, reservation):
         if sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-aattr", reservation['account']):
-            sge_utils.set_slots(wn, self.config['set_slots_command'], reservation['queue'])
-            return True
-        return false
+            return sge_utils.set_slots(wn, self.config['set_slots_command'], reservation['queue'])
+        return False
         
     def hold_node(self, wn):
         log.debug("hold node %s in cluster" % wn)
@@ -401,8 +400,12 @@ class SGEManager(ClusterManager):
 
     def remove_node(self, wn, reservation):
         log.debug("removing node %s from cluster" % wn)
+        if wn.jobs:
+            for j in jobs:
+                log.debug("deleting job %s"%j)
+                sge_utils.delete_job(j)
         sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-dattr", reservation['account'])
         time.sleep(.5)
         sge_utils.unset_slots(wn, self.config['unset_slots_command'], reservation['queue'])
         time.sleep(.5)
-        sge_utils.remove_node_from_sge(wn, self.config['remove_node_command'])
+        return sge_utils.remove_node_from_sge(wn, self.config['remove_node_command'])

@@ -128,6 +128,9 @@ cluster:
 
     # the command to run qconf -sp command to get allocation rule
     qconf_sp_command: /opt/sge/bin/lx-amd64/qconf -sp {0} | grep allocation_rule | awk '{{print $2}}'
+
+    # the command to run qdel -f command to force deletion of a dead job
+    qdel_command: /opt/sge/bin/lx-amd64/qdel -f {0}
     
 cloud:
   os-res:

@@ -127,9 +127,9 @@ class Server(object):
                 result=self.__result_queue.get(block=False)
                 log.debug("got a result: %s"%result)
                 self.process_result(result)
-                time.sleep(1)
             except Empty:
                 pass
+            time.sleep(1)
             #log.debug(interval)
             interval-=1
             if interval==0:
@@ -189,7 +189,7 @@ class Server(object):
                     elif workernodes[0].instance.state==Instance.Starting and time.time()-workernodes[0].instance.creation_time>self.config['dynamic-cluster']['max_launch_time']:
                         log.debug("it takes too long for worker node %s to launch, kill it"%workernodes[0].hostname)
                         workernodes[0].instance.tasked=True
-                        self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))  
+                        self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==workernodes[0].instance.cloud_resource][0], "instance": workernodes[0].instance}))  
                     elif workernodes[0].instance.state==Instance.Inexistent:
                         log.debug("instance %s is gone, remove it from the list" % instance)
                         self.info.worker_nodes.remove(workernodes[0])
@@ -215,8 +215,13 @@ class Server(object):
                         log.debug("instance %s is gone, remove it"%workernodes[0].hostname)
                         self.__cluster.remove_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation'])
                         self.info.worker_nodes.remove(workernodes[0])
-                        if "post_vm_provision_command" in self.config['dynamic-cluster']:
-                            run_post_command(workernodes[0], self.config['dynamic-cluster']["post_vm_provision_command"])
+                        if "post_vm_destroy_command" in self.config['dynamic-cluster']:
+                            run_post_command(workernodes[0], self.config['dynamic-cluster']["post_vm_destroy_command"])
+                elif workernodes[0].state==WorkerNode.Deleting and workernodes[0].instance.state==Instance.Inexistent:
+                    log.debug("instance %s is gone, remove it"%workernodes[0].hostname)
+                    self.info.worker_nodes.remove(workernodes[0])
+                    if "post_vm_destroy_command" in self.config['dynamic-cluster']:
+                        run_post_command(workernodes[0], self.config['dynamic-cluster']["post_vm_destroy_command"])
                 log.debug("updated workernode %s"%workernodes[0])
             else:
                 log.debug("failed to update cloud state for instance %s, try again later."%instance.uuid)
@@ -277,6 +282,7 @@ class Server(object):
                 elif wn.instance.state==Instance.Active:
                     wn.hostname=wn.instance.public_dns_name
                     wn.state=WorkerNode.Configuring
+                    wn.state_start_time=time.time()
                     log.debug("worker node %s is starting, and it is active in cloud, check its configuration state." % wn.hostname)
                     wn.instance.tasked=True
                     self.__task_queue.put(Task(Task.UpdateConfigStatus, {"checker": self.config['dynamic-cluster']['config-checker'], "instance": wn.instance}))
@@ -297,25 +303,28 @@ class Server(object):
                     run_post_command(workernodes[0], self.config['dynamic-cluster']["post_remove_node_command"])
                 wn.instance.tasked=True
                 wn.state=WorkerNode.Deleting
+                wn.state_start_time=time.time()
                 self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))                    
             elif wn.state==WorkerNode.Idle and (wn.time_in_current_state>self.config['dynamic-cluster']['max_idle_time'] or (wn.state_start_time>0 and time.time()-wn.state_start_time>self.config['dynamic-cluster']['max_idle_time'])):
                 res=[r for r in self.resources if r.name==wn.instance.cloud_resource]
                 if len(res)==0:
                     log.error("cannot find resource %s"%wn.instance.cloud_resource)
                     return
-                log.notice("update current_num of res %s" % res[0].name)
                 current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res[0].name and w.state not in [WorkerNode.Deleting, WorkerNode.Holding, WorkerNode.Held]])
+                log.notice("update current_num of res %s: %s" % (res[0].name,current_num))
                 if current_num>res[0].min_num:
                     log.debug("worker node %s has been idle for too long and the resource has more nodes than minimal requirement, delete it" % wn.hostname)
                     self.__cluster.remove_node(wn, self.config['cloud'][wn.instance.cloud_resource]['reservation'])
                     wn.instance.tasked=True
                     wn.state=WorkerNode.Deleting
+                    wn.state_start_time=time.time()
                     self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))                    
             elif wn.state==WorkerNode.Error and (wn.time_in_current_state>self.config['dynamic-cluster']['max_down_time'] or (wn.state_start_time>0 and time.time()-wn.state_start_time>self.config['dynamic-cluster']['max_down_time'])):
                 log.debug("worker node %s has been down for too long, delete it" % wn.hostname)
                 self.__cluster.remove_node(wn, self.config['cloud'][wn.instance.cloud_resource]['reservation'])
                 wn.instance.tasked=True
                 wn.state=WorkerNode.Deleting
+                wn.state_start_time=time.time()
                 self.__task_queue.put(Task(Task.Destroy, {"resource": [r for r in self.resources if r.name==wn.instance.cloud_resource][0], "instance": wn.instance}))                    
         for res in self.resources:
             res.current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name])

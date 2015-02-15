@@ -85,9 +85,11 @@ def hold_node_in_sge(wn, qmod_command):
         if returncode != 0:
             log.error("Error when disabling node %s in sge, returncode %s"% (wn.hostname, returncode))
             log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+            return False
+        return True
     except:
         log.exception("Problem running %s, unexpected error" % cmd)
-        return 
+        return False
 
 def remove_node_from_sge(wn, remove_node_command):
     log.debug("removing node %s from sge" % (wn.hostname))
@@ -100,9 +102,11 @@ def remove_node_from_sge(wn, remove_node_command):
         if returncode != 0:
             log.error("Error when removing %s from sge, returncode %s"% (wn.hostname, returncode))
             log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+            return False
+        return True
     except:
         log.exception("Problem running %s, unexpected error" % string.join(remove_node, " "))
-        return 
+        return False
 
 def set_slots(wn, set_slots_command, queue):
     log.debug("setting slots for %s@%s" % (queue, wn.hostname))
@@ -115,9 +119,11 @@ def set_slots(wn, set_slots_command, queue):
         if returncode != 0:
             log.error("Error when setting slots for %s@%s, returncode %s"% (queue, wn.hostname, returncode))
             log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+            return False
+        return True
     except:
         log.exception("Problem running %s, unexpected error" % string.join(cmd, " "))
-        return 
+        return False
 
 def unset_slots(wn, unset_slots_command, queue):
     log.debug("unsetting slots for %s@%s" % (queue, wn.hostname))
@@ -130,9 +136,11 @@ def unset_slots(wn, unset_slots_command, queue):
         if returncode != 0:
             log.error("Error when unsetting slots for %s@%s, returncode %s"% (queue, wn.hostname, returncode))
             log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+            return False
+        return True
     except:
         log.exception("Problem running %s, unexpected error" % string.join(cmd, " "))
-        return 
+        return False
 
 def get_pes(qconf_spl_command):
     log.notice("getting all pes")
@@ -166,3 +174,19 @@ def get_pe_allocation_rule(qconf_sp_command, pe):
     except:
         log.exception("Problem running %s, unexpected error" % qconf_sp_command.format(pe))
         return ""
+
+def delete_job(qdel_command, job_id):
+    log.notice("deleting job %s"%job_id)
+    try:
+        sp = subprocess.Popen(qdel_command.format(job_id), shell=True,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+        if returncode != 0:
+            log.error("Error when deleting job %s, returncode %s"% (job_id, returncode))
+            log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+            return False
+        return True
+    except:
+        log.exception("Problem running %s, unexpected error" % qdel_command.format(job_id))
+        return False
