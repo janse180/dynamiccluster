@@ -22,3 +22,11 @@ class CloudNotSupportedException(BaseException):
 class ConfigCheckerNotSupportedException(BaseException):
     pass
 
+class ConfigCheckerError(BaseException):
+    pass
+
+class PluginInitialisationError(BaseException):
+    pass
+
+class GraphiteReporterError(BaseException):
+    pass

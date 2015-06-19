@@ -68,3 +68,28 @@ def get_aws_vcpu_num_by_instance_type(type):
     elif type.endswith(".8xlarge"):
         return 32
     return 1
+
+def init_object(class_name, server):
+    mod_name = '.'.join(class_name.split('.')[:-1])
+    class_name = class_name.split('.')[-1]
+    try:
+        mod = __import__(mod_name, globals(), locals(), [class_name])
+    except SyntaxError, e:
+        raise PluginInitialisationError(
+            "Plugin %s (%s) contains a syntax error at line %s" %
+            (class_name, e.filename, e.lineno))
+    except ImportError, e:
+        raise PluginInitialisationError(
+            "Failed to import plugin %s: %s" %
+            (plugin_name, e[0]))
+    klass = getattr(mod, class_name, None)
+    if not klass:
+        raise PluginInitialisationError(
+            'Plugin class %s does not exist' % class_name)
+    try:
+        return klass(server)
+    except Exception as exc:
+        raise PluginInitialisationError(
+            "Failed to load plugin %s with "
+            "the following error: %s - %s" %
+            (class_name, exc.__class__.__name__, exc.message))

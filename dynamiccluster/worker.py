@@ -1,6 +1,6 @@
 import multiprocessing
 import signal
-from dynamiccluster.utilities import getLogger
+from dynamiccluster.utilities import getLogger, init_object
 from Queue import Empty
 from dynamiccluster.os_manager import OpenStackManager
 from dynamiccluster.aws_manager import AWSManager
@@ -92,6 +92,9 @@ class Worker(multiprocessing.Process):
     def __get_config_checker(self, config):
         if config.keys()[0].lower()=="port":
             return PortChecker(port=config['port']['number'])
+        elif config.keys()[0].lower()=="plugin":
+            plugin_name=config['plugin']['name']
+            return init_object(plugin_name)
         else:
             raise ConfigCheckerNotSupportedException("Config checker %s is not supported" % config.keys()[0])
         

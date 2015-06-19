@@ -8,7 +8,7 @@ from Queue import Empty
 from multiprocessing import Process, Queue, cpu_count
 from dynamiccluster.admin_server import AdminServer
 import dynamiccluster.cluster_manager as cluster_manager
-from dynamiccluster.utilities import getLogger, excepthook, get_aws_vcpu_num_by_instance_type
+from dynamiccluster.utilities import getLogger, excepthook, get_aws_vcpu_num_by_instance_type, init_object
 from dynamiccluster.data import ClusterInfo
 from dynamiccluster.data import CloudResource
 from dynamiccluster.data import Instance
@@ -40,6 +40,7 @@ class Server(object):
         self.__task_queue=Queue()
         self.__result_queue=Queue()
         self.__workers=[]
+        self.__plugin_objects=[]
         self.resources=[]
         self.__resource_allocator=None
         
@@ -412,7 +413,15 @@ class Server(object):
         for w in self.__workers:
             w.start()
             log.debug("started worker pid=%d"%w.pid)
-
+        if 'plugins' in self.config['dynamic-cluster']:
+            plugins=self.config['dynamic-cluster']['plugins']
+            for plugin in plugins:
+                class_name=plugin['class_name']
+                self.__plugin_objects.append(init_object(plugins[plugin]['listener'], self.info))
+        for plugin_obj in self.__plugin_objects:
+            plugin_obj.daemon=True
+            plugin_obj.start()
+                    
         
         self.query_and_process()
         #else:
@@ -438,6 +447,8 @@ class Server(object):
             self.__task_queue.put(Task(Task.Quit))
         self.__running=False
         log.debug("Waiting for Dynamic Cluster to exit ...")
+        for plugin_obj in self.__plugin_objects:
+            plugin_obj.stop()
         for w in self.__workers:
             w.join()
             

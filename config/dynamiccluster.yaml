@@ -26,6 +26,8 @@ dynamic-cluster:
   #   the basic one is to check if a port is opened (e.g. if a service is running and listening on a port)
     port:
       number: 15002
+  # plugin:
+  #   name: dynamiccluster.salt.SaltChecker
   # a script to be executed after adding a node to Torque (just before setting it to online) 
   #  it takes two parameters which are the hostname of the VM and the IP of the VM
   #post_add_node_command: /the/path/some.sh {0} {1}
@@ -182,3 +184,11 @@ cloud:
       #proxy:
       #proxy_port:
       
+plugins:
+  salt:
+    class_name: dynamiccluster.salt.SaltListener
+  graphite:
+    class_name: dynamiccluster.graphite.GraphiteReporter
+    arguments:
+      url: http://localhost:8080
+      prefix: headnode.dynamiccluster
