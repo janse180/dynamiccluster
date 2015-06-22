@@ -1,0 +1,4 @@
+$pbsserver   {{ server_name }}
+$logevent    0x1ff
+$tmpdir        /tmp
+$usecp *:/home   /home
