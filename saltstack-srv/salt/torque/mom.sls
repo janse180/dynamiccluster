@@ -7,7 +7,7 @@ mom-package:
     - group: root
     - mode: 700
 
-mom:
+mom-install:
   cmd:
     - run
     - name: /tmp/torque-package-mom-linux-x86_64.sh --install
@@ -56,8 +56,9 @@ servername-file:
 pbs_mom:
   service.running:
     - enable: True
+    - sig: pbs_mom
     - require:
-      - cmd: mom
+      - cmd: mom-install
       - file: mom-initd
     - watch:
       - file: mom-config
