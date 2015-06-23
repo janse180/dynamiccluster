@@ -2,4 +2,4 @@ base:
   '*':
     - ntp
     - servername
- 
+    - dynamictorque 
