@@ -1,4 +1,4 @@
-=== Salt Master config
+### Salt Master config
 
 /etc/salt/master
 ```
