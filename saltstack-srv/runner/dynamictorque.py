@@ -9,13 +9,7 @@ def process_minion_request(minion_id):
     saltenv = 'base'
     id_, grains, _ = salt.utils.minions.get_minion_data("*", __opts__)
     if grains is None:
-        grains = {'fqdn': minion}
-
-    for key in kwargs:
-        if key == 'saltenv':
-            saltenv = kwargs[key]
-        else:
-            grains[key] = kwargs[key]
+        grains = {'fqdn': "*"}
 
     pillar = salt.pillar.Pillar(
         __opts__,
