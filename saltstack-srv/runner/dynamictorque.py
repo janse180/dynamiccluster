@@ -4,6 +4,7 @@ from __future__ import absolute_import
 
 import salt.pillar
 import salt.wheel
+from subprocess import Popen, PIPE
 
 def process_minion_request(minion_id):
     saltenv = 'base'
@@ -27,10 +28,11 @@ def process_minion_request(minion_id):
         returncode = process.returncode
     except:
         print "Dynamic Torque is not running."
+        return False
     else:
         wheel = salt.wheel.Wheel(__opts__)
         if minion_id in output:
             wheel.call_func('key.accept', match=minion_id)
         else:
             wheel.call_func('key.reject', match=minion_id)
-        
+        return True
