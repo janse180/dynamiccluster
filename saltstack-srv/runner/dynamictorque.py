@@ -5,9 +5,9 @@ from __future__ import absolute_import
 import salt.pillar
 import salt.wheel
 
-def procee_minion_request(minion_id):
+def process_minion_request(minion_id):
     saltenv = 'base'
-    id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
+    id_, grains, _ = salt.utils.minions.get_minion_data("*", __opts__)
     if grains is None:
         grains = {'fqdn': minion}
 
