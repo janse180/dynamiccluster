@@ -3,4 +3,4 @@ send_result:
     - minion_id: {{ data['id'] }}
     - data: {{ data['data'] }}
     - host: localhost
-    - port: 8080
+    - port: 2003
