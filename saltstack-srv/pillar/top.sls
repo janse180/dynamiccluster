@@ -2,4 +2,5 @@ base:
   '*':
     - ntp
     - servername
-    - dynamictorque 
+    - dynamictorque
+    - schedule
