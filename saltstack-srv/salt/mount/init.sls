@@ -1,6 +1,6 @@
 home:
   mount.mounted:
-    - name: /home
+    - name: /home/users
     - device: {{ pillar['nfs_fqdn'] }}:/home
     - fstype: nfs4
     - opts: rsize=32768,wsize=32768,noatime,nodiratime,soft,_netdev
