@@ -46,14 +46,6 @@ TODO:
 # needed to log to log file
 import logging
 
-# needed for config to opts processing
-import os
-import salt.syspaths as syspaths
-from salt.config import minion_config
-
-# needed to send events over ZMQ
-import salt.utils.event
-
 log = logging.getLogger(__name__)
 
 # needed to define the module's virtual name
@@ -68,29 +60,5 @@ def returner(ret):
     Send the return data to the Salt Master over the encrypted
     0MQ bus with custom tag for 3rd party script filtering.
     '''
-
-    # get opts from minion config file, supports minion.d drop dir!
-    opts = minion_config(os.path.join(syspaths.CONFIG_DIR, 'minion'))
-
-    # TODO: this needs to be customizable!
-    tag = 'collector'
-
-    # add custom tag to return data for filtering
-    ret['tag'] = tag
-
-    # multi event example, supports a list of event ret objects.
-    # single event does not currently expand/filter properly on Master side.
-    package = {
-      #'id': opts['id'],
-      'events': [ ret ],
-      'tag': None,
-      'pretag': None,
-      'data': None
-    }
-
-    # opts must contain valid minion ID else it binds to invalid 0MQ socket.
-    event = salt.utils.event.SaltEvent('minion', **opts)
-
-    # Fire event payload with 'fire_master' tag which triggers the
-    # salt-minion daemon to forward payload to the master event bus!
-    event.fire_event(package, 'fire_master')
+    
+    __salt__['event.send']('collector/result', ret['return'])

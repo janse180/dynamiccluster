@@ -10,4 +10,4 @@ def _readfile(filename):
 def collect_load_avg():
     data=_readfile("/proc/loadavg")
     variables=data[0].split(" ")
-    return {"timestamp": int(time.time()), "1m": variables[0], "5m": variables[1], "15m": variables[2]}
+    return {"tag": "loadavg", "timestamp": int(time.time()), "1m": variables[0], "5m": variables[1], "15m": variables[2]}
