@@ -12,4 +12,6 @@ reactor:
       /srv/reactor/auth-pending.sls
   - 'salt/minion/devwn-*/start':
     - /srv/reactor/wn-start.sls
+  - 'collector/result':
+    - /srv/reactor/collector.sls
 ```
