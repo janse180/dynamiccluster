@@ -50,7 +50,7 @@ def send(minion_id, data, host, port):
 def _generate_messages(minion_id, data):
     messages=[]
     if data['tag']=='loadavg':
-        messages.append("%s.loadavg.1min %.2f %d" % (minion_id, data['1m'], data['timestamp'] ))
-        messages.append("%s.loadavg.5min %.2f %d" % (minion_id, data['5m'], data['timestamp'] ))
-        messages.append("%s.loadavg.15min %.2f %d" % (minion_id, data['15m'], data['timestamp'] ))
+        messages.append("%s.loadavg.1min %s %d" % (minion_id, data['1m'], data['timestamp'] ))
+        messages.append("%s.loadavg.5min %s %d" % (minion_id, data['5m'], data['timestamp'] ))
+        messages.append("%s.loadavg.15min %s %d" % (minion_id, data['15m'], data['timestamp'] ))
     return messages
