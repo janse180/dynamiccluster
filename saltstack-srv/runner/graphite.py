@@ -6,10 +6,12 @@ import salt.pillar
 
 # Import salt libs
 import salt.utils.error
-
-import socket
         
 def send(minion_id, data, host, port):
+    """
+    a method to send metric to graphite
+    """
+    import socket
     timeout_in_seconds = 2
     _socket = socket.socket()
     _socket.settimeout(timeout_in_seconds)
@@ -50,7 +52,18 @@ def send(minion_id, data, host, port):
 def _generate_messages(minion_id, data):
     messages=[]
     if data['tag']=='loadavg':
-        messages.append("%s.loadavg.1min %s %d" % (minion_id, data['1m'], data['timestamp'] ))
-        messages.append("%s.loadavg.5min %s %d" % (minion_id, data['5m'], data['timestamp'] ))
-        messages.append("%s.loadavg.15min %s %d" % (minion_id, data['15m'], data['timestamp'] ))
+        messages.append("%s.load.1min %s %d" % (minion_id, data['1m'], data['timestamp'] ))
+        messages.append("%s.load.5min %s %d" % (minion_id, data['5m'], data['timestamp'] ))
+        messages.append("%s.load.15min %s %d" % (minion_id, data['15m'], data['timestamp'] ))
     return messages
+
+def cleanup(minion_id, whisper_path):
+    """
+    a method to clean up metric data in whisper
+    """
+    import shutil
+    import os
+    try:
+        shutil.rmtree(whisper_path+os.linesep+minion_id)
+    except Exception as error:
+        salt.utils.error.raise_error(name="graphite.cleanup", message="unable to cleanup data for worker node %s: %s" % (minion_id, error))

@@ -8,7 +8,7 @@ log = getLogger(__name__)
 info = None
 
 class GraphiteReporter(threading.Thread):
-    def __init__(self, _info=None, hostname="localhost", port=8080, interval=60, prefix="headnode.dynamiccluster"):
+    def __init__(self, _info=None, hostname="localhost", port=2003, interval=60, prefix="headnode.dynamiccluster"):
         threading.Thread.__init__(self, name=self.__class__.__name__)
         global info
         info=_info

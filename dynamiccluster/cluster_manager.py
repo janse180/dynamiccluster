@@ -82,7 +82,9 @@ class TorqueManager(ClusterManager):
                     the_node.jobs=None
                 the_node.extra_attributes={"mom_service_port": node["mom_service_port"], 
                                              "mom_manager_port": node["mom_manager_port"],
-                                             "gpus": node["gpus"], "ntype": node["ntype"]}
+                                             "ntype": node["ntype"]}
+                if "gpus" in node:
+                    the_node.extra_attributes["gpus"]=node["gpus"]
                 if "status" in node:
                     the_node.extra_attributes["status"]=node["status"]
             if len(nodes)>0:
