@@ -53,6 +53,7 @@ class SaltChecker(ConfigChecker):
 
     def check(self, instance):
         import salt.client
+        local = salt.client.LocalClient()
         running_jobs=local.cmd(instance.instance_name,'saltutil.is_running',['state.highstate'])
         if running_jobs is None or instance.instance_name not in running_jobs:
             log.error("Unable to check the config status of %s"%instance.instance_name)
