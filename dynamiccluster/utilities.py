@@ -69,7 +69,7 @@ def get_aws_vcpu_num_by_instance_type(type):
         return 32
     return 1
 
-def init_object(class_name, server):
+def init_object(class_name, **kwargs):
     mod_name = '.'.join(class_name.split('.')[:-1])
     class_name = class_name.split('.')[-1]
     try:
@@ -87,7 +87,7 @@ def init_object(class_name, server):
         raise PluginInitialisationError(
             'Plugin class %s does not exist' % class_name)
     try:
-        return klass(server)
+        return klass(**kwargs)
     except Exception as exc:
         raise PluginInitialisationError(
             "Failed to load plugin %s with "

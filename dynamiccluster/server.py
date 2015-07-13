@@ -311,7 +311,7 @@ class Server(object):
                 if len(res)==0:
                     log.error("cannot find resource %s"%wn.instance.cloud_resource)
                     return
-                current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res[0].name and w.state not in [WorkerNode.Deleting, WorkerNode.Holding, WorkerNode.Held]])
+                current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res[0].name and w.state not in [WorkerNode.Deleting, WorkerNode.Holding, WorkerNode.Held, WorkerNode.Starting, WorkerNode.Configuring]])
                 log.notice("update current_num of res %s: %s" % (res[0].name,current_num))
                 if current_num>res[0].min_num:
                     log.debug("worker node %s has been idle for too long and the resource has more nodes than minimal requirement, delete it" % wn.hostname)
@@ -417,7 +417,9 @@ class Server(object):
             plugins=self.config['dynamic-cluster']['plugins']
             for plugin in plugins:
                 class_name=plugin['class_name']
-                self.__plugin_objects.append(init_object(plugins[plugin]['listener'], self.info))
+                arguments=plugin['arguments']
+                arguments['_info']=self.info
+                self.__plugin_objects.append(init_object(plugins[plugin]['listener'], **arguments))
         for plugin_obj in self.__plugin_objects:
             plugin_obj.daemon=True
             plugin_obj.start()
