@@ -1,6 +1,6 @@
 from dynamiccluster.utilities import getLogger
 
-import string
+import string, shlex, subprocess
 
 log = getLogger(__name__)
 
