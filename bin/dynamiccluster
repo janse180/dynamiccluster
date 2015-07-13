@@ -33,12 +33,13 @@ class DynamicClusterServer(object):
 		print "based on the work load."
 		print
 		print "Options:"
-		print "    -b                   start in background"
-		print "    -f                   start in foreground"
-		print "    -p <FILE>            pidfile path"
-		print "    -c <FILE>            configuration file path"
-		print "    -h, --help           display this help message"
-		print "    -V, --version        print the version"
+		print "    -b                    start in background"
+		print "    -f                    start in foreground"
+		print "    -p <FILE>             pidfile path"
+		print "    -c <FILE>             configuration file path"
+		print "    -v, --verbose         change verbose level"
+		print "    -h, --help            display this help message"
+		print "    -V, --version         print the version"
 
 	def __getCmdLineOptions(self, optList):
 		""" Gets the command line options

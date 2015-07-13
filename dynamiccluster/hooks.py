@@ -1,5 +1,7 @@
 from dynamiccluster.utilities import getLogger
 
+import string
+
 log = getLogger(__name__)
 
 def run_post_command(wn, command):
