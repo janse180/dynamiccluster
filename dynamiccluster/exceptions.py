@@ -1,32 +1,32 @@
-class NoClusterDefinedException(BaseException):
+class NoClusterDefinedException(Exception):
     pass
 
-class ServerInitializationError(BaseException):
+class ServerInitializationError(Exception):
     pass
 
-class NoCloudResourceException(BaseException):
+class NoCloudResourceException(Exception):
     pass
 
-class WorkerNodeNotFoundException(BaseException):
+class WorkerNodeNotFoundException(Exception):
     pass
 
-class CloudNotAvailableException(BaseException):
+class CloudNotAvailableException(Exception):
     pass
 
-class FlavorNotFoundException(BaseException):
+class FlavorNotFoundException(Exception):
     pass
 
-class CloudNotSupportedException(BaseException):
+class CloudNotSupportedException(Exception):
     pass
 
-class ConfigCheckerNotSupportedException(BaseException):
+class ConfigCheckerNotSupportedException(Exception):
     pass
 
-class ConfigCheckerError(BaseException):
+class ConfigCheckerError(Exception):
     pass
 
-class PluginInitialisationError(BaseException):
+class PluginInitialisationError(Exception):
     pass
 
-class GraphiteReporterError(BaseException):
+class GraphiteReporterError(Exception):
     pass
