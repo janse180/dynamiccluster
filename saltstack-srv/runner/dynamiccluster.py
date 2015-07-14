@@ -18,7 +18,7 @@ def process_minion_request(minion_id, url="http://localhost:8001/workernode?stat
     else:
         wns=r.json()
         log.debug("wns %s" % wns)
-        starting_ids=[wn.instance.instance_name for wn in wns]
+        starting_ids=[wn['instance']['instance_name'] for wn in wns]
         wheel = salt.wheel.Wheel(__opts__)
         if minion_id in starting_ids:
             wheel.call_func('key.accept', match=minion_id)
