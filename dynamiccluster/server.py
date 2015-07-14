@@ -232,9 +232,9 @@ class Server(object):
             if len(workernodes)==0:
                 log.error("instance %s is not in the current list. something is wrong" % instance.uuid)
                 return
+            workernodes[0].instance=instance
             workernodes[0].instance.tasked=False
             workernodes[0].instance.last_task_result=result.status
-            workernodes[0].instance=instance
             if result.status==Result.Success:
                 workernodes[0].instance.last_update_time=time.time()
                 if workernodes[0].state==WorkerNode.Configuring:
