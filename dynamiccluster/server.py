@@ -413,8 +413,8 @@ class Server(object):
         for w in self.__workers:
             w.start()
             log.debug("started worker pid=%d"%w.pid)
-        if 'plugins' in self.config['dynamic-cluster']:
-            plugins=self.config['dynamic-cluster']['plugins']
+        if 'plugins' in self.config:
+            plugins=self.config['plugins']
             for plugin in plugins:
                 class_name=plugin['class_name']
                 arguments=plugin['arguments']
