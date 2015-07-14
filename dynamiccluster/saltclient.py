@@ -2,6 +2,7 @@ from dynamiccluster.utilities import getLogger
 from dynamiccluster.config_checker import ConfigChecker
 from dynamiccluster.data import WorkerNode
 from dynamiccluster.data import Instance
+from dynamiccluster.exceptions import ConfigCheckerError
 import threading
 import time
 
