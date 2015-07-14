@@ -419,7 +419,7 @@ class Server(object):
                 class_name=plugin['class_name']
                 arguments=plugin['arguments']
                 arguments['_info']=self.info
-                self.__plugin_objects.append(init_object(plugins[plugin]['listener'], **arguments))
+                self.__plugin_objects.append(init_object(class_name, **arguments))
         for plugin_obj in self.__plugin_objects:
             plugin_obj.daemon=True
             plugin_obj.start()
