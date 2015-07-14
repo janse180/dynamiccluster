@@ -9,7 +9,7 @@ import requests
 import logging
 log = logging.getLogger(__name__)
 
-def process_minion_request(minion_id, url="http://localhost:8001/workernode?state=1"):
+def process_minion_request(minion_id, url="http://localhost:8001/workernode?state=2"):
     try:
         r = requests.get(url)
     except:
