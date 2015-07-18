@@ -12,6 +12,17 @@ def getLogger(name):
         name = "dynamiccluster.%s" % name.rpartition(".")[-1]
     return logging.getLogger(name)
 
+def get_log_level(verbose):
+    if verbose <= 0:
+        return logging.ERROR
+    elif verbose == 1:
+        return logging.WARNING
+    elif verbose == 2:
+        return logging.INFO
+    elif verbose == 3:
+        return logging.DEBUG
+    return logging.NOTICE
+
 def excepthook(exctype, value, traceback):
     """Except hook used to log unhandled exceptions to log
     """

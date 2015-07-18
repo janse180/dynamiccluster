@@ -3,29 +3,35 @@ from bottle import route, run, static_file, abort, request
 import threading
 from dynamiccluster.utilities import getLogger
 from dynamiccluster.exceptions import NoCloudResourceException
+import os
 
 log = getLogger(__name__)
 server = None
+root_path = ""
 
 class AdminServer(threading.Thread):
     
     @route('/dashboard', method='GET')
     def get_admin_index():
+        global root_path
         log.debug("get dashboard index page")
-        return static_file("index.html", root='html')
+        return static_file("index.html", root=root_path+os.pathsep+'html')
 
     @route('/js/:page', method='GET')
     def get_js_page(page):
+        global root_path
         log.debug("static js page to return %s"%(page))
-        return static_file(page, root='html/js')
+        return static_file(page, root=root_path+os.pathsep+'html'+os.pathsep+'js')
     @route('/css/:page', method='GET')
     def get_js_page(page):
+        global root_path
         log.debug("static css page to return %s"%(page))
-        return static_file(page, root='html/css')
+        return static_file(page, root=root_path+os.pathsep+'html'+os.pathsep+'css')
     @route('/fonts/:page', method='GET')
     def get_fonts_page(page):
+        global root_path
         log.debug("static fonts page to return %s"%(page))
-        return static_file(page, root='html/fonts')
+        return static_file(page, root=root_path+os.pathsep+'html'+os.pathsep+'fonts')
     
     @route('/workernode')
     def get_workernodes():
@@ -125,10 +131,12 @@ class AdminServer(threading.Thread):
             abort(500, "Cloud resource not found")
         abort(400, "Unknown error")
     
-    def __init__(self, srv=None):
+    def __init__(self, srv=None, working_path=""):
         threading.Thread.__init__(self, name=self.__class__.__name__)
         global server
         server=srv
+        global root_path
+        root_path=working_path
         self.__port=server.config['dynamic-cluster']['admin-server']['port']
         
     def run(self):

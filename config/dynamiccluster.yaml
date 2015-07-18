@@ -193,3 +193,10 @@ plugins:
       hostname: localhost
       port: 8080
       prefix: headnode.dynamiccluster
+
+logging:
+    log_level: 3
+    log_location: /tmp/dynamiccluster.log
+    log_format: "%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s"
+    log_max_size: 2097152
+      

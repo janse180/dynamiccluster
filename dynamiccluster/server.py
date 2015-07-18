@@ -5,10 +5,11 @@ import admin_server
 import yaml
 from threading import Thread
 from Queue import Empty
+from dynamiccluster.daemon import Daemon
 from multiprocessing import Process, Queue, cpu_count
 from dynamiccluster.admin_server import AdminServer
 import dynamiccluster.cluster_manager as cluster_manager
-from dynamiccluster.utilities import getLogger, excepthook, get_aws_vcpu_num_by_instance_type, init_object
+from dynamiccluster.utilities import getLogger, excepthook, get_aws_vcpu_num_by_instance_type, init_object, get_log_level
 from dynamiccluster.data import ClusterInfo
 from dynamiccluster.data import CloudResource
 from dynamiccluster.data import Instance
@@ -22,18 +23,19 @@ from dynamiccluster.aws_manager import AWSManager
 from dynamiccluster.hooks import run_post_command
 from dynamiccluster.exceptions import NoClusterDefinedException, ServerInitializationError, NoCloudResourceException, WorkerNodeNotFoundException
 from dynamiccluster.resource_allocator import ResourceAllocator
+import logging
 
 log = getLogger(__name__)
 
-class Server(object):
-    def __init__(self, background=False, pidfile="", configfile=""):
-        self.__background=background
+class Server(Daemon):
+    def __init__(self, pidfile="", configfile="", working_path="/", stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
+        Daemon.__init__(self, pidfile, stdin, stdout, stderr)
         self.__pidfile=pidfile
         self.configfile=configfile
+        self.__working_path=working_path
         self.__running=True
         stream = open(configfile, 'r')
         self.config = yaml.load(stream)
-        log.debug(json.dumps(self.config, indent=2))
         self.info=ClusterInfo()
         self.__cluster=None
         self.__auto=True
@@ -353,36 +355,31 @@ class Server(object):
         list=[w for w in self.info.worker_nodes if w.instance is not None and w.instance.cloud_resource==res_name and (w.state==WorkerNode.Starting or w.state==WorkerNode.Configuring)]
         return len(list)>0
         
-    def start(self):
-        log.info("Starting Dynamic Cluster v" + version.version)
-        
-        # Install signal handlers
-        signal.signal(signal.SIGTERM, self.__sigTERMhandler)
-        signal.signal(signal.SIGINT, self.__sigTERMhandler)
-        # Ensure unhandled exceptions are logged
-        sys.excepthook = excepthook
-
-        # First set the mask to only allow access to owner
-        os.umask(0077)
-        if self.__background==True: # pragma: no cover
-            log.info("Starting in daemon mode")
-            ret = self.__createDaemon()
-            if ret:
-                log.info("Daemon started")
+    def init(self, run_in_background, verbose):
+        if run_in_background and 'logging' in self.config:
+            if 'log_level' in self.config['logging']:
+                log.setLevel(get_log_level(self.config['logging']['log_level']))
+            log_formatter = logging.Formatter(self.config['logging']['log_format'])
+            file_handler = None
+            if 'log_max_size' in self.config['logging']:
+                file_handler = logging.handlers.RotatingFileHandler(
+                                                self.config['logging']['log_location'],
+                                                maxBytes=self.config['logging']['log_max_size'],
+                                                backupCount=3)
             else:
-                log.error("Could not create daemon")
-                raise ServerInitializationError("Could not create daemon")
-        
-            # Creates a PID file.
-            if len(self.__pidfile)>0:
                 try:
-                    log.debug("Creating PID file %s" % self.__pidfile)
-                    pidFile = open(self.__pidfile, 'w')
-                    pidFile.write("%s\n" % os.getpid())
-                    pidFile.close()
-                except IOError, e:
-                    log.error("Unable to create PID file: %s" % e)
-        
+                    file_handler = logging.handlers.WatchedFileHandler(
+                                                self.config['logging']['log_location'],)
+                except AttributeError:
+                    # Python 2.5 doesn't support WatchedFileHandler
+                    file_handler = logging.handlers.RotatingFileHandler(
+                                                self.config['logging']['log_location'],)
+    
+            file_handler.setFormatter(log_formatter)
+            log.addHandler(file_handler)
+        if verbose>0:
+            log.setLevel(get_log_level(verbose))
+        log.debug(json.dumps(self.config, indent=2))
         if self.config['cluster']['type'].lower()=="torque":
             self.__cluster=cluster_manager.TorqueManager(self.config['cluster']['config'])
         elif self.config['cluster']['type'].lower()=="sge":
@@ -392,12 +389,21 @@ class Server(object):
         
         self.__gather_cluster_info()
         self.__init_resources()
+        self.__resource_allocator=ResourceAllocator()
+    
+    def run(self):
+        log.info("Starting Dynamic Cluster v" + version.version)
         
-        adminServer=AdminServer(self)
+        # Install signal handlers
+        signal.signal(signal.SIGTERM, self.__sigTERMhandler)
+        signal.signal(signal.SIGINT, self.__sigTERMhandler)
+        # Ensure unhandled exceptions are logged
+        sys.excepthook = excepthook
+
+        log.debug("self.__working_path %s"%self.__working_path)
+        adminServer=AdminServer(self, self.__working_path)
         adminServer.daemon = True
         adminServer.start()
-        
-        self.__resource_allocator=ResourceAllocator()
         
         worker_num=1
         if "worker_number" in self.config['dynamic-cluster']:
@@ -415,7 +421,8 @@ class Server(object):
             log.debug("started worker pid=%d"%w.pid)
         if 'plugins' in self.config:
             plugins=self.config['plugins']
-            for plugin in plugins:
+            log.debug("plugins %s" % plugins)
+            for plugin_name,plugin in plugins.iteritems():
                 class_name=plugin['class_name']
                 arguments=plugin['arguments']
                 arguments['_info']=self.info
@@ -423,23 +430,8 @@ class Server(object):
         for plugin_obj in self.__plugin_objects:
             plugin_obj.daemon=True
             plugin_obj.start()
-                    
         
         self.query_and_process()
-        #else:
-        #    main_thread=Thread(target=self.query_and_process, name="QueryThread")
-        #    main_thread.daemon = True
-        #    main_thread.start()
-        
-        if self.__background==True:
-            #log.debug("joining main thread")
-            #main_thread.join()
-             # Removes the PID file.
-            try:
-                log.debug("Remove PID file %s" % self.__pidfile)
-                os.remove(self.__pidfile)
-            except OSError, e:
-                log.error("Unable to remove PID file: %s" % e)
             
         log.info("Dynamic Cluster has stopped")
              
@@ -447,10 +439,12 @@ class Server(object):
         for i in xrange(len(self.__workers)):
             log.debug("send Quit to shut down child process")
             self.__task_queue.put(Task(Task.Quit))
+        for plugin_obj in self.__plugin_objects:
+            plugin_obj.stop()
         self.__running=False
         log.debug("Waiting for Dynamic Cluster to exit ...")
         for plugin_obj in self.__plugin_objects:
-            plugin_obj.stop()
+            plugin_obj.join()
         for w in self.__workers:
             w.join()
             
@@ -491,89 +485,4 @@ class Server(object):
         elif (workernodes[0].state==WorkerNode.Busy and forced) or workernodes[0].state!=WorkerNode.Busy:
             self.__cluster.hold_node(workernodes[0])
             workernodes[0].state=WorkerNode.Holding
-
-    def __createDaemon(self): # pragma: no cover
-        """ Detach a process from the controlling terminal and run it in the
-            background as a daemon.
-        
-            http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/278731
-        """
-    
-        # When the first child terminates, all processes in the second child
-        # are sent a SIGHUP, so it's ignored.
-
-        # We need to set this in the parent process, so it gets inherited by the
-        # child process, and this makes sure that it is effect even if the parent
-        # terminates quickly.
-        signal.signal(signal.SIGHUP, signal.SIG_IGN)
-        
-        try:
-            # Fork a child process so the parent can exit.  This will return control
-            # to the command line or shell.  This is required so that the new process
-            # is guaranteed not to be a process group leader.  We have this guarantee
-            # because the process GID of the parent is inherited by the child, but
-            # the child gets a new PID, making it impossible for its PID to equal its
-            # PGID.
-            pid = os.fork()
-        except OSError, e:
-            return((e.errno, e.strerror))     # ERROR (return a tuple)
-        
-        if pid == 0:       # The first child.
-    
-            # Next we call os.setsid() to become the session leader of this new
-            # session.  The process also becomes the process group leader of the
-            # new process group.  Since a controlling terminal is associated with a
-            # session, and this new session has not yet acquired a controlling
-            # terminal our process now has no controlling terminal.  This shouldn't
-            # fail, since we're guaranteed that the child is not a process group
-            # leader.
-            os.setsid()
-        
-            try:
-                # Fork a second child to prevent zombies.  Since the first child is
-                # a session leader without a controlling terminal, it's possible for
-                # it to acquire one by opening a terminal in the future.  This second
-                # fork guarantees that the child is no longer a session leader, thus
-                # preventing the daemon from ever acquiring a controlling terminal.
-                pid = os.fork()        # Fork a second child.
-            except OSError, e:
-                return((e.errno, e.strerror))  # ERROR (return a tuple)
-        
-            if (pid == 0):      # The second child.
-                # Ensure that the daemon doesn't keep any directory in use.  Failure
-                # to do this could make a filesystem unmountable.
-                os.chdir("/")
-            else:
-                os._exit(0)      # Exit parent (the first child) of the second child.
-        else:
-            os._exit(0)         # Exit parent of the first child.
-        
-        # Close all open files.  Try the system configuration variable, SC_OPEN_MAX,
-        # for the maximum number of open files to close.  If it doesn't exist, use
-        # the default value (configurable).
-        try:
-            maxfd = os.sysconf("SC_OPEN_MAX")
-        except (AttributeError, ValueError):
-            maxfd = 256       # default maximum
-    
-        # urandom should not be closed in Python 3.4.0. Fixed in 3.4.1
-        # http://bugs.python.org/issue21207
-        if sys.version_info[0:3] == (3, 4, 0): # pragma: no cover
-            urandom_fd = os.open("/dev/urandom", os.O_RDONLY)
-            for fd in range(0, maxfd):
-                try:
-                    if not os.path.sameopenfile(urandom_fd, fd):
-                        os.close(fd)
-                except OSError:   # ERROR (ignore)
-                    pass
-            os.close(urandom_fd)
-        else:
-            os.closerange(0, maxfd)
-    
-        # Redirect the standard file descriptors to /dev/null.
-        os.open("/dev/null", os.O_RDONLY)    # standard input (0)
-        os.open("/dev/null", os.O_RDWR)        # standard output (1)
-        os.open("/dev/null", os.O_RDWR)        # standard error (2)
-        return True
-
 
