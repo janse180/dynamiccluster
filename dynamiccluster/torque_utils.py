@@ -211,7 +211,7 @@ def set_node_online(wn, set_node_command):
         returncode = sp.returncode
 #           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
         if returncode != 0:
-            log.error("Error setting node %s online"%wn.hostname)
+            log.error("Error setting node %s online: %s; %s"%(wn.hostname,cmd_out, cmd_err))
     except:
         log.exception("Problem running set_node_command %s, unexpected error"%wn.hostname)
         return

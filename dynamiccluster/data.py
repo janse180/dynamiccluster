@@ -3,8 +3,17 @@ import time
 import inspect
 import sys
 
-class WorkerNode(object):
-    Inexistent, Starting, Configuring, Idle, Busy, Error, Deleting, Holding, Held = range(9)
+class EnumBase: # base class of all Enums
+    @classmethod
+    def tostring(cls, value):
+        return dict((v,k) for k,v in cls.__dict__.iteritems())[value]
+
+    @classmethod
+    def fromstring(cls, name):
+        return cls.__dict__[name]
+    
+class WorkerNode(EnumBase):
+    Inexistent, Starting, Idle, Busy, Error, Deleting, Holding, Held = range(8)
     def __init__(self, hostname=None, type="Physical"):
         self.hostname=hostname
         self.type=type
@@ -21,8 +30,8 @@ class WorkerNode(object):
             self.__dict__.update({'time_in_current_state':time.time()-self.state_start_time})
         return json.dumps(self, default=lambda o: o.__dict__)
         
-class Instance(object):
-    Inexistent, Pending, Starting, Active, Configured, Deleting, Error, Unknown = range(8)
+class Instance(EnumBase):
+    Inexistent, Pending, Starting, Active, Ready, Deleting, Error, Unknown = range(8)
     def __init__(self, uuid):
         self.uuid=uuid
         self.instance_name=None

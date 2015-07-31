@@ -24,7 +24,7 @@ class PortChecker(ConfigChecker):
             log.debug(  "Connected to %s on port %s" % (instance.ip, self.port))
             s.shutdown(socket.SHUT_RDWR)
             s.close()
-            instance.state=Instance.Configured
+            instance.state=Instance.Ready
         except socket.error, e:
             log.debug( "Connection to %s on port %s failed: %s" % (instance.ip, self.port, e))
             instance.state=Instance.Active

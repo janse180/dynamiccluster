@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import time
 import datetime
 from dynamiccluster.utilities import getLogger, unix_time
+from dynamiccluster.hooks import run_post_command
 
 log = getLogger(__name__)
 
@@ -23,6 +24,10 @@ class ClusterManager(object):
         assert 0, 'Must define update_worker_nodes'
     def query_jobs(self):
         assert 0, 'Must define query_jobs'
+    def on_instance_active(self, worker_node, reservation):
+        pass
+    def on_instace_ready(self, worker_node, reservation):
+        pass
     def add_node(self, node, reservation):
         assert 0, 'Must define add_node'
     def hold_node(self, node):
@@ -186,6 +191,20 @@ class TorqueManager(ClusterManager):
         except:
             log.exception("cannot parse diagnose_p output: %s" % diag_p_output)
             return [], 0
+            
+    def on_instance_ready(self, worker_node, reservation):
+        log.debug("workernode %s is ready, add it to cluster"%worker_node.hostname)
+        if self.add_node(worker_node, reservation):
+            # run post add_node_command here!
+            if "post_add_node_command" in self.config:
+                run_post_command(worker_node, self.config["post_add_node_command"])
+        else:
+            log.debug("cannot add node %s to cluster, delete it"%worker_node.hostname)
+            self.remove_node(worker_node, reservation)
+            if "post_remove_node_command" in self.config:
+                run_post_command(worker_node, self.config["post_remove_node_command"])
+            worker_node.state=WorkerNode.Deleting
+            worker_node.state_start_time=time.time()
             
     def add_node(self, wn, reservation):
         log.debug("adding node %s to cluster with reservation %s" % (wn, reservation))
@@ -390,6 +409,26 @@ class SGEManager(ClusterManager):
         except:
             log.exception("cannot parse qstat output: %s" % qstat_output)
             return [], 0
+    
+    def on_instance_active(self, worker_node, reservation):
+        log.debug("workernode %s is provisioned, add it to cluster"%worker_node.hostname)
+        if self.add_node(worker_node, reservation):
+            #workernodes[0].state=WorkerNode.Idle
+            #workernodes[0].state_start_time=time.time()
+            # run post add_node_command here!
+            if "post_add_node_command" in self.config:
+                run_post_command(worker_node, self.config["post_add_node_command"])
+        else:
+            log.debug("cannot add node %s to cluster, delete it"%worker_node.hostname)
+            self.remove_node(worker_node, reservation)
+            if "post_remove_node_command" in self.config:
+                run_post_command(worker_node, self.config["post_remove_node_command"])
+            worker_node.state=WorkerNode.Deleting
+            worker_node.state_start_time=time.time()
+
+    def on_instance_ready(self, worker_node, reservation):
+        worker_node.state=WorkerNode.Idle
+        worker_node.state_start_time=time.time()
     
     def add_node(self, wn, reservation):
         if sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-aattr", reservation['account']):

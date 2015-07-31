@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import getopt, sys, os
-from dynamiccluster.server import Server
+from dynamiccluster.server import DynamicServer
 from dynamiccluster.__version__ import version
 import os.path
 import logging
@@ -18,7 +18,7 @@ class DynamicClusterLoader(object):
 		self.__argv = None
 		self.__conf = dict()
 		self.__conf["background"] = False
-		self.__conf["pidfile"] = "/var/run/dynamiccluster/server.pid"
+		self.__conf["pidfile"] = "/tmp/dynamiccluster.pid"
 		self.__conf["verbose"] = 0
 		self.__conf["configfile"] = "/etc/dynamiccluster/dynamiccluster.yaml"
 
@@ -92,7 +92,7 @@ class DynamicClusterLoader(object):
 		if not os.path.isfile(self.__conf["configfile"]):
 			sys.stderr.write("Configuration file %s does not exist.\n" % self.__conf["configfile"])
 			return False
-		dynamic_cluster_server = Server(self.__conf["pidfile"], self.__conf["configfile"], os.getcwd())
+		dynamic_cluster_server = DynamicServer(self.__conf["pidfile"], self.__conf["configfile"], os.getcwd())
 		try:
 			dynamic_cluster_server.init(self.__conf["background"], verbose)
 		except NoClusterDefinedException:

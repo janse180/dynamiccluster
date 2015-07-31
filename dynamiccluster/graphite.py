@@ -45,7 +45,7 @@ class GraphiteReporter(threading.Thread):
                 timestamp = int(time.time())
                 wns = info.worker_nodes[:]
                 wn_total=len(wns)
-                wn_starting=len([wn for wn in wns if wn.state in[WorkerNode.Starting, WorkerNode.Configuring]])
+                wn_starting=len([wn for wn in wns if wn.state in[WorkerNode.Starting]])
                 wn_deleting=len([wn for wn in wns if wn.state in[WorkerNode.Deleting]])
                 del wns
                 messages=[]

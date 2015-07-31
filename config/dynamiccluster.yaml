@@ -28,13 +28,6 @@ dynamic-cluster:
       number: 15002
   # plugin:
   #   name: dynamiccluster.salt.SaltChecker
-  # a script to be executed after adding a node to Torque (just before setting it to online) 
-  #  it takes two parameters which are the hostname of the VM and the IP of the VM
-  #post_add_node_command: /the/path/some.sh {0} {1}
-  
-  # a script to be executed after removing a node from Torque (after it is destroyed from the cloud)
-  #  it takes two parameters which are the hostname of the VM and the IP of the VM
-  #post_remove_node_command: /the/path/some.sh {0} {1}
   
   # a script to be executed after cloud provisioning is finished (VM state in the cloud becomes ACTIVE) 
   #  it takes two parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
@@ -89,6 +82,14 @@ cluster:
     # the command to unset account_string in a node
     releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | grep {1} | awk '{{print $3}}' `
   
+    # a script to be executed after adding a node to Torque (just before setting it to online) 
+    #  it takes two parameters which are the hostname of the VM and the IP of the VM
+    #post_add_node_command: /the/path/some.sh {0} {1}
+    
+    # a script to be executed after removing a node from Torque (after it is destroyed from the cloud)
+    #  it takes two parameters which are the hostname of the VM and the IP of the VM
+    #post_remove_node_command: /the/path/some.sh {0} {1}
+
 cluster:
   type: sge
   config:
@@ -185,13 +186,11 @@ cloud:
       #proxy_port:
       
 plugins:
-  salt:
-    class_name: dynamiccluster.salt.SaltListener
   graphite:
     class_name: dynamiccluster.graphite.GraphiteReporter
     arguments:
       hostname: localhost
-      port: 8080
+      port: 2003
       prefix: headnode.dynamiccluster
 
 logging:

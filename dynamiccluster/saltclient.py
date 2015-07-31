@@ -55,18 +55,24 @@ class SaltChecker(ConfigChecker):
     def check(self, instance):
         import salt.client
         local = salt.client.LocalClient()
-        running_jobs=local.cmd(instance.instance_name,'saltutil.is_running',['state.highstate'])
-        if running_jobs is None or instance.instance_name not in running_jobs:
-            log.error("Unable to check the config status of %s"%instance.instance_name)
+        try:
+            running_jobs=local.cmd(instance.instance_name,'saltutil.is_running',['state.highstate'])
+        except:
             raise ConfigCheckerError()
+        if len(running_jobs)==0 or instance.instance_name not in running_jobs:
+            log.notice("host %s is not up yet."%instance.instance_name)
+            return instance
         if len(running_jobs[instance.instance_name])>0:
             log.notice("highstate is still running, wait a bit longer")
             instance.state=Instance.Active
             return instance
-        results=local.cmd(instance.instance_name, 'state.highstate', {"test":True})
-        if results is None or instance.instance_name not in results:
-            log.error("Unable to check the config status of %s"%instance.instance_name)
+        try:
+            results=local.cmd(instance.instance_name, 'state.highstate', {"test":True})
+        except:
             raise ConfigCheckerError()
+        if len(results)==0 or instance.instance_name not in results:
+            log.notice("host %s is not up yet."%instance.instance_name)
+            return instance
         instance.state=Instance.Active
         configured=True
         for check in results[instance.instance_name].keys():
@@ -74,5 +80,5 @@ class SaltChecker(ConfigChecker):
                 configured=False
                 break
         if configured is True:
-            instance.state=Instance.Configured
+            instance.state=Instance.Ready
         return instance

@@ -10,6 +10,15 @@ class NoCloudResourceException(Exception):
 class WorkerNodeNotFoundException(Exception):
     pass
 
+class DuplicatedWorkerNodeException(Exception):
+    pass
+
+class CloudResourceNotFoundException(Exception):
+    pass
+
+class DuplicatedCloudResourceException(Exception):
+    pass
+
 class CloudNotAvailableException(Exception):
     pass
 
