@@ -5,9 +5,10 @@ from dynamiccluster.server import DynamicServer
 from dynamiccluster.__version__ import version
 import os.path
 import logging
-from dynamiccluster.utilities import getLogger
+from dynamiccluster.utilities import getLogger, get_log_level
 from dynamiccluster.exceptions import NoClusterDefinedException
 import traceback
+import yaml
 
 # Gets the instance of the logger.
 log = getLogger("dynamiccluster")
@@ -80,21 +81,49 @@ class DynamicClusterLoader(object):
 
 		self.__getCmdLineOptions(optList)
 		verbose = self.__conf["verbose"]
-		if not self.__conf["background"]:
-			# Add the default logging handler to dump to stderr
-			logout = logging.StreamHandler(sys.stderr)
-			# set a format which is simpler for console use
-			formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s')
-			# tell the handler to use this format
-			logout.setFormatter(formatter)
-			log.addHandler(logout)
-		#print os.getcwd()
-		if not os.path.isfile(self.__conf["configfile"]):
-			sys.stderr.write("Configuration file %s does not exist.\n" % self.__conf["configfile"])
-			return False
-		dynamic_cluster_server = DynamicServer(self.__conf["pidfile"], self.__conf["configfile"], os.getcwd())
+		
+		if not os.path.exists(self.__conf["configfile"]) or not os.path.isfile(self.__conf["configfile"]):
+			print "Config file %s does not exist or is not a file." % self.__conf["configfile"]
+			sys.exit(1)
+
+		config=yaml.load(open(self.__conf["configfile"], 'r'))
+
+		if 'logging' in config:
+			if 'log_level' in config['logging']:
+				log.setLevel(get_log_level(config['logging']['log_level']))
+			if not self.__conf["background"]:
+				# Add the default logging handler to dump to stderr
+				logout = logging.StreamHandler(sys.stderr)
+				# set a format which is simpler for console use
+				formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s')
+				# tell the handler to use this format
+				logout.setFormatter(formatter)
+				log.addHandler(logout)
+			elif self.__conf["background"]:
+				log_formatter = logging.Formatter(config['logging']['log_format'])
+				file_handler = None
+				if 'log_max_size' in config['logging']:
+					file_handler = logging.handlers.RotatingFileHandler(
+													config['logging']['log_location'],
+													maxBytes=config['logging']['log_max_size'],
+													backupCount=3)
+				else:
+					try:
+						file_handler = logging.handlers.WatchedFileHandler(
+													config['logging']['log_location'],)
+					except AttributeError:
+						# Python 2.5 doesn't support WatchedFileHandler
+						file_handler = logging.handlers.RotatingFileHandler(
+													config['logging']['log_location'],)
+		
+				file_handler.setFormatter(log_formatter)
+				log.addHandler(file_handler)
+		if verbose>0:
+			log.setLevel(get_log_level(verbose))
+
+		dynamic_cluster_server = DynamicServer(config, self.__conf["pidfile"], os.getcwd())
 		try:
-			dynamic_cluster_server.init(self.__conf["background"], verbose)
+			dynamic_cluster_server.init()
 		except NoClusterDefinedException:
 			sys.stderr.write("You must define a valid cluster in config file.\n")
 			#dynamic_cluster_server.quit()

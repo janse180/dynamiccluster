@@ -103,7 +103,7 @@ class TorqueManager(ClusterManager):
         self.state["torque"], qstat_output=torque_utils.job_query(self.config['qstat_command'])
         self.state["maui"], diag_p_output=torque_utils.job_query(self.config['diagnose_p_command'])
         if len(qstat_output)==0:
-            log.debug("There is no job in the queue.")
+            log.notice("There is no job in the queue.")
             return [], 0
         try:
             queued_jobs = []
@@ -136,7 +136,7 @@ class TorqueManager(ClusterManager):
         except:
             log.exception("cannot parse qstat output: %s" % qstat_output)
             return [], 0
-    
+        log.notice("jobs: %s" % raw_queued_jobs)
         try:
             lines=diag_p_output.split("\n")
             for each_line in lines[5:]:
@@ -146,13 +146,18 @@ class TorqueManager(ClusterManager):
                 items=each_line.split()
                 #log.notice("items %s"%items)
                 job_id=items[0].strip()
+                if job_id not in raw_queued_jobs:
+                    continue
                 job_dict=raw_queued_jobs[job_id]
                 job=Job(job_id)
                 job.name=job_dict["Job_Name"]
                 job.owner=job_dict["Job_Owner"]
-                job.queue=job_dict["queue"]
-                job.requested_walltime=job_dict["Resource_List.walltime"]
-                job.requested_mem=job_dict["Resource_List.mem"]
+                if "queue" in job_dict:
+                    job.queue=job_dict["queue"]
+                if "Resource_List.walltime" in job_dict:
+                    job.requested_walltime=job_dict["Resource_List.walltime"]
+                if "Resource_List.mem" in job_dict:
+                    job.requested_mem=job_dict["Resource_List.mem"]
                 if "Resource_List.nodes" in job_dict:
                     strs=job_dict["Resource_List.nodes"].split(":")
                     num_cores=1
@@ -179,7 +184,6 @@ class TorqueManager(ClusterManager):
                 #    job.requested_proc=ProcRequirement()
                 if "Account_Name" in job_dict:
                     job.account=job_dict["Account_Name"]
-                job.requested_mem=job_dict["Resource_List.mem"]
                 job.state=Job.Queued
                 job.creation_time=job_dict['ctime']
                 job.priority=int(items[1].strip().replace('*',''))
@@ -241,6 +245,7 @@ class TorqueManager(ClusterManager):
         if "property" in reservation and reservation['property'] is not None:
             torque_utils.set_node_property(wn, reservation['property'], self.config['set_node_command'])
             time.sleep(2)
+        # this is not needed for Torque 5.1.1
         torque_utils.set_node_online(wn, self.config['set_node_command'])
         time.sleep(2)
         return True

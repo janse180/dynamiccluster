@@ -29,52 +29,25 @@ import logging
 log = getLogger(__name__)
 
 class DynamicServer(Daemon):
-    def __init__(self, pidfile="", configfile="", working_path="/", stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
+    def __init__(self, config, pidfile="", working_path="/", stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
         Daemon.__init__(self, pidfile, stdin, stdout, stderr)
         self.__pidfile=pidfile
         self.info=ClusterInfo()
-        self.configfile=configfile
         self.__working_path=working_path
         self.__running=True
-        stream = open(configfile, 'r')
         self.task_queue=Queue()
         self.result_queue=Queue()
         self.__workers=[]
         self.__plugin_objects=[]
-        self.config=yaml.load(stream)
-        self.engine = DynamicEngine(self.config,self.info,self.task_queue,self.result_queue)
+        self.config=config
+        self.engine=None
         
     def __sigTERMhandler(self, signum, frame):
         log.debug("Caught signal %d. Exiting" % signum)
         self.quit()
         
-    def init(self, run_in_background, verbose):
-        if run_in_background and 'logging' in self.config:
-            if 'log_level' in self.config['logging']:
-                log.setLevel(get_log_level(self.config['logging']['log_level']))
-            log_formatter = logging.Formatter(self.config['logging']['log_format'])
-            file_handler = None
-            if 'log_max_size' in self.config['logging']:
-                file_handler = logging.handlers.RotatingFileHandler(
-                                                self.config['logging']['log_location'],
-                                                maxBytes=self.config['logging']['log_max_size'],
-                                                backupCount=3)
-            else:
-                try:
-                    file_handler = logging.handlers.WatchedFileHandler(
-                                                self.config['logging']['log_location'],)
-                except AttributeError:
-                    # Python 2.5 doesn't support WatchedFileHandler
-                    file_handler = logging.handlers.RotatingFileHandler(
-                                                self.config['logging']['log_location'],)
-    
-            file_handler.setFormatter(log_formatter)
-            log.addHandler(file_handler)
-        if verbose>0:
-            log.setLevel(get_log_level(verbose))
-        #log.debug(json.dumps(self.config, indent=2))
-        
-        self.engine.init()
+    def init(self):
+        self.engine = DynamicEngine(self.config,self.info,self.task_queue,self.result_queue)
         
     def run(self):
         log.info("Starting Dynamic Cluster v" + version.version)
@@ -159,7 +132,6 @@ class DynamicEngine(threading.Thread):
         self.__max_down_time=self.config['dynamic-cluster'].get('max_down_time', 600)
         self.__max_launch_time=self.config['dynamic-cluster'].get('max_launch_time', 1200)
 
-    def init(self):
         if self.config['cluster']['type'].lower()=="torque":
             self.__cluster=cluster_manager.TorqueManager(self.config['cluster']['config'])
         elif self.config['cluster']['type'].lower()=="sge":

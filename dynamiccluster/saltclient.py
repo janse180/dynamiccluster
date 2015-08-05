@@ -9,6 +9,7 @@ import time
 log = getLogger(__name__)
 info = None
 
+#This class is deprecated
 class SaltListener(threading.Thread):
     def __init__(self, _info=None):
         threading.Thread.__init__(self, name=self.__class__.__name__)
