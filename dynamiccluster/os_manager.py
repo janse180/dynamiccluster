@@ -91,8 +91,8 @@ class OpenStackManager(CloudManager):
         if instance.state==Instance.Active:
             try:
                 ip=server.addresses.values()[0][0]['addr']
-                if instance.public_dns_name==None:
-                    instance.public_dns_name=hostname_lookup(ip)
+                if instance.dns_name==None:
+                    instance.dns_name=hostname_lookup(ip)
             except:
                 log.exception("Unable to get IP for instance %s"%instance.uuid)
                 instance.state=Instance.Starting
@@ -124,7 +124,7 @@ class OpenStackManager(CloudManager):
                         log.notice("ip2 %s"%server.addresses.values()[0])
                         log.notice("ip3 %s"%server.addresses.values()[0][0])
                         instance.ip=server.addresses.values()[0][0]['addr']
-                        instance.public_dns_name=hostname_lookup(instance.ip)
+                        instance.dns_name=hostname_lookup(instance.ip)
                     except:
                         log.exception("Unable to get IP for instance %s"%instance)
                     instance.availability_zone=getattr(server,"OS-EXT-AZ:availability_zone")

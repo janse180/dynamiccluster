@@ -319,7 +319,7 @@ class SGEManager(ClusterManager):
                         if the_node.state!=WorkerNode.Held:
                             the_node.state_start_time=time.time()
                         the_node.state=WorkerNode.Held
-                    if "E" in node["queue.state_string"] or ("u" in node["queue.state_string"] and the_node.state!=WorkerNode.Configuring):
+                    if "E" in node["queue.state_string"] or ("u" in node["queue.state_string"] and the_node.state!=WorkerNode.Starting):
                         if the_node.state!=WorkerNode.Error:
                             the_node.state_start_time=time.time()
                         the_node.state=WorkerNode.Error

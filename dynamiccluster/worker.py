@@ -76,8 +76,9 @@ class Worker(multiprocessing.Process):
                     elif task.type==Task.Destroy:
                         cloud_manager=self.__get_cloud_manager(task.data['resource'])
                         if cloud_manager.destroy(instance=task.data['instance']):
+                            instance=cloud_manager.update(instance=task.data['instance'])
                             task.data['instance'].last_update_time=time.time()
-                            self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':task.data['instance']}))
+                            self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':instance}))
                         else:
                             self.__result_queue.put(Result(task.type, Result.Failed, task.data))
                     elif task.type==Task.Quit:

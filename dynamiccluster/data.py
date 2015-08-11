@@ -37,13 +37,14 @@ class Instance(EnumBase):
         self.instance_name=None
         self.state=Instance.Inexistent
         self.ip=None
-        self.public_dns_name=None
+        self.dns_name=None
         self.vcpu_number=0
         self.flavor=None
         self.key_name=None
         self.security_groups=None
         self.availability_zone=None
         self.image_uuid=None
+        self.subnet_id=None
         self.creation_time=0
         self.cloud_resource=None
         self.last_update_time=0

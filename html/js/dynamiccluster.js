@@ -58,7 +58,7 @@ function showWorkerNode(hostname) {
 					'<tr><th>UUID</th><td>'+data.instance.uuid+'</td></tr>'+
 					'<tr><th>Cloud Resource</th><td>'+data.instance.cloud_resource+'</td></tr>'+
 					'<tr><th>IP</th><td>'+data.instance.ip+'</td></tr>'+
-					'<tr><th>Public DNS Name</th><td>'+data.instance.public_dns_name+'</td></tr>'+
+					'<tr><th>DNS Name</th><td>'+data.instance.dns_name+'</td></tr>'+
 					'<tr><th>State</th><td>'+convertCloudState(data.instance.state)+'</td></tr>'+
 					'<tr><th>Flavor</th><td>'+data.instance.flavor+'</td></tr>'+
 					'<tr><th>VCPU Number</th><td>'+data.instance.vcpu_number+'</td></tr>'+
@@ -148,15 +148,16 @@ function initResourceView() {
 			  if (val.reservation_queue) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Queue</span>&nbsp;'+val.reservation_queue+'&nbsp;&nbsp;';
 			  if (val.reservation_property) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Property</span>&nbsp;'+val.reservation_property+'&nbsp;&nbsp;';
 			  if (val.reservation_account) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Account</span>&nbsp;'+val.reservation_account+'&nbsp;&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-success btn-sm" id="addbutton'+val.name+'" data-toggle="modal" data-target="#addResDialog" data-whatever="'+val.name+'">Add</button></h5></div>';
+			  htmlstr+='<button type="button" class="btn btn-success btn-sm" id="addbutton'+val.name+'" data-toggle="modal" data-target="#addResDialog" data-whatever="'+val.name+'">Add</button>&nbsp;';
+			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="removebutton'+val.name+'" data-toggle="modal" data-target="#removeResDialog" data-whatever="'+val.name+'">Remove</button></h5></div>';
 			  percentage=parseInt(val.current_num*100/val.max_num);
 			  htmlstr+='<div class="progress"><div class="progress-bar" role="progressbar" aria-valuenow="'+percentage+'" aria-valuemin="0" aria-valuemax="100" style="width: '+percentage+'%;">'+percentage+'%</div></div></div>';
-			  htmlstr+='<table class="table table-striped table-condensed"><thead><tr><th>Hostname</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>Jobs</th></tr></thead><tbody>';
+			  htmlstr+='<table class="table table-striped table-condensed" id="table'+val.name+'"><thead><tr><th>&nbsp;</th><th>Hostname</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>Jobs</th></tr></thead><tbody>';
 			  $.each(val.worker_nodes, function(key1, val1){
 				  console.log(val1);
 				  jobs='';
 				  if (val1.jobs) jobs=val1.jobs;
-				  htmlstr+='<tr><th><a href=\'javascript:showWorkerNode("'+val1.hostname+'")\'>'+val1.hostname+'</a></th><td>'+val1.instance.instance_name+'</td><td>'+val1.num_proc+'</td><td>'+convertWNState(val1.state)+'</td><td>'+val1.instance.ip+'</td><td>'+convertCloudState(val1.instance.state)+'</td><td>'+jobs+'</td></tr>';
+				  htmlstr+='<tr><th><input class="checkbox" type="checkbox" value="'+val1.hostname+'"></th><th><a href=\'javascript:showWorkerNode("'+val1.hostname+'")\'>'+val1.hostname+'</a></th><td>'+val1.instance.instance_name+'</td><td>'+val1.num_proc+'</td><td>'+convertWNState(val1.state)+'</td><td>'+val1.instance.ip+'</td><td>'+convertCloudState(val1.instance.state)+'</td><td>'+jobs+'</td></tr>';
 			  });
 			  htmlstr+='</tbody></table></div></div>';
 		  });
@@ -183,6 +184,24 @@ function addResource(res_name, num){
 	
 }
 
+function removeResource(wn){
+	console.log(wn);
+	$.ajax({
+        type: "DELETE",
+        url: "/workernode/"+wn,
+        success: function(response) {
+		    console.log(response);
+		    if (response["success"]==true){
+		    	$("#successalert").show();
+		    	initResourceView();
+		    }else
+		    	$("#failalert").show();
+	    }
+	});
+	
+}
+
+
 $('#addResDialog').on('show.bs.modal', function (event) {
 	  var button = $(event.relatedTarget); // Button that triggered the modal
 	  var res_name = button.data('whatever'); // Extract info from data-* attributes
@@ -206,6 +225,41 @@ $('#addResDialog').find('.modal-body button').click(function() {
     	inputbox.css({ "border": '#FF0000 1px solid'});
     	inputbox.tooltip('show');
     }
+});
+$('#removeResDialog').on('show.bs.modal', function (event) {
+	var selected = [];
+	var button = $(event.relatedTarget); // Button that triggered the modal
+	var res_name = button.data('whatever');
+	//console.log(res_name);
+	$("#removeList").empty();
+	$('#table'+res_name+' input:checked').each(function() {
+	    selected.push($(this).val());
+	    $("#removeList").append('<li>'+$(this).val()+'</li>');
+	});
+	//console.log(inputbox);
+	if (selected.length==0) {
+		$("#removeResModalMain").html("Please select worker nodes to delete.");
+		$('#removeResDialog').find('.modal-footer .btn-primary').prop('disabled', true);
+	} else {
+		htmlStr="Do you really want to remove the following worker nodes?<ul id='removeList'>";
+		$.each( selected, function( key, val ) {
+			htmlStr+='<li>'+val+'</li>';
+		});
+		htmlStr+="</ul>";
+		$("#removeResModalMain").html(htmlStr);
+		$('#removeResDialog').find('.modal-footer .btn-primary').prop('disabled', false);
+	}
+    console.log(selected);
+    //console.log($.isNumeric(n));
+});
+
+$('#removeResDialog').find('.modal-footer .btn-primary').click(function() {
+	$('#removeList').each(function() {
+		$(this).find('li').each(function(){
+			removeResource($(this).text());
+		});
+	});
+	$('#removeResDialog').modal('hide');
 });
 
 initWNView();

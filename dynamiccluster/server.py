@@ -163,16 +163,16 @@ class DynamicEngine(threading.Thread):
             instance_list=cloud_manager.list()
             for instance in instance_list:
                 if instance.state==Instance.Active:
-                    workernodes=[w for w in self.info.worker_nodes if w.hostname==instance.public_dns_name]
+                    workernodes=[w for w in self.info.worker_nodes if w.hostname==instance.dns_name]
                     if len(workernodes)>0:
-                        log.debug("instance %s is a worker node in cluster"%instance.public_dns_name)
+                        log.debug("instance %s is a worker node in cluster"%instance.dns_name)
                         workernodes[0].instance=instance
                         workernodes[0].type=self.config['cloud'][instance.cloud_resource]['type']
                         if workernodes[0].state==WorkerNode.Idle or workernodes[0].state==WorkerNode.Busy:
                             workernodes[0].instance.state=Instance.Ready
                     else:
-                        log.debug("instance %s is not a worker node in cluster, delete it"%instance.public_dns_name)
-                        wn=WorkerNode(instance.public_dns_name)
+                        log.debug("instance %s is not a worker node in cluster, delete it"%instance.dns_name)
+                        wn=WorkerNode(instance.dns_name)
                         wn.state=WorkerNode.Deleting
                         wn.state_start_time=time.time()
                         wn.instance=instance
@@ -192,18 +192,18 @@ class DynamicEngine(threading.Thread):
                     wn.type=self.config['cloud'][instance.cloud_resource]['type']
                     self.info.worker_nodes.append(wn)
                 elif instance.state!=Instance.Inexistent:
-                    workernodes=[w for w in self.info.worker_nodes if w.hostname==instance.public_dns_name]
+                    workernodes=[w for w in self.info.worker_nodes if w.hostname==instance.dns_name]
                     if len(workernodes)>0:
-                        log.warn("instance %s is a worker node in cluster and it is in a funny state, need further checking."%instance.public_dns_name)
+                        log.warn("instance %s is a worker node in cluster and it is in a funny state, need further checking."%instance.dns_name)
                         #if workernodes[0].state==Busy:
-                        #    log.debug("instance %s is a worker node in cluster and it is running jobs, but it is dead in the cloud, let admin fix it."%instance.public_dns_name)
+                        #    log.debug("instance %s is a worker node in cluster and it is running jobs, but it is dead in the cloud, let admin fix it."%instance.dns_name)
                         #else:
-                        #    log.debug("instance %s is a worker node in cluster but it is not running any jobs and dead in the cloud, remove it"%instance.public_dns_name)
+                        #    log.debug("instance %s is a worker node in cluster but it is not running any jobs and dead in the cloud, remove it"%instance.dns_name)
                         #    workernodes[0].instance=instance
                         #    workernodes[0].state=WorkerNode.Deleting
                         #    self.__cluster.remove_node(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation'])
                     else:
-                        log.debug("instance %s is not a worker node in cluster and it is dead in the cloud, remove it"%instance.public_dns_name)
+                        log.debug("instance %s is not a worker node in cluster and it is dead in the cloud, remove it"%instance.dns_name)
                         wn=WorkerNode(instance.instance_name)
                         wn.state=WorkerNode.Deleting
                         wn.state_start_time=time.time()
@@ -299,7 +299,7 @@ class DynamicEngine(threading.Thread):
 
     def on_starting(self, worker_node):
         if worker_node.instance.state==Instance.Active:
-            worker_node.hostname=worker_node.instance.public_dns_name
+            worker_node.hostname=worker_node.instance.dns_name
             worker_node.num_proc=worker_node.instance.vcpu_number
         elif worker_node.instance.state==Instance.Inexistent:
             log.debug("instance %s is gone, remove it from the list" % worker_node.instance)
@@ -308,7 +308,7 @@ class DynamicEngine(threading.Thread):
             return
         if time.time()-worker_node.instance.last_update_time>self.__cloud_poller_interval:
             if worker_node.instance.state==Instance.Pending or worker_node.instance.state==Instance.Starting:
-                log.debug("worker node %s is starting, and the cloud state is pending/starting it, update its cloud state now." % worker_node.hostname)
+                log.debug("worker node %s is starting, and the cloud state is pending/starting, update its cloud state now." % worker_node.hostname)
                 self.new_task(worker_node, Task(Task.UpdateCloudState, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))
             elif worker_node.instance.state==Instance.Active:
                 log.debug("worker node %s is starting, and it is active in cloud, check its configuration state." % worker_node.hostname)
@@ -350,13 +350,19 @@ class DynamicEngine(threading.Thread):
                 else:
                     ## delete jobs??
                     log.error("instance %s is in error state but it has jobs running, need admin's attention"%worker_node.hostname)
-    
+            else:
+                log.debug("unable to remove instance %s in the normal way, force delete"%worker_node.hostname)
+                self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))
+            
     def on_deleting(self, worker_node):
         if worker_node.instance.state==Instance.Inexistent:
             log.debug("instance %s is gone, remove it"%worker_node.hostname)
             self.info.worker_nodes.remove(worker_node)
             if "post_vm_destroy_command" in self.config['dynamic-cluster']:
                 run_post_command(worker_node, self.config['dynamic-cluster']["post_vm_destroy_command"])
+        elif worker_node.instance.state!=Instance.Deleting:
+            log.debug("worker node %s is not deleting, delete it again." % worker_node.hostname)
+            self.new_task(worker_node, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))
         elif time.time()-worker_node.instance.last_update_time>self.__cloud_poller_interval:
             log.debug("worker node %s is deleting, update its state now." % worker_node.hostname)
             self.new_task(worker_node, Task(Task.UpdateCloudState, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))

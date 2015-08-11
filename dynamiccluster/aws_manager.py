@@ -10,6 +10,7 @@ import boto.ec2 as ec2
 from boto import config as boto_config
 from boto.connection import HAVE_HTTPS_CONNECTION
 from boto.s3.key import Key
+from boto.ec2.networkinterface import NetworkInterfaceSpecification, NetworkInterfaceCollection
 
 log = getLogger(__name__)
 
@@ -65,7 +66,17 @@ class AWSManager(CloudManager):
                     if "spot_timeout" in self.config:
                         timeout=self.config["spot_timeout"]
                     valid_until=(datetime.datetime.utcnow()+datetime.timedelta(0, timeout)).isoformat()
-                    req=self.conn.request_spot_instances(self.config['spot_bid'], self.config['image_id'], count=1, valid_until=valid_until, user_data=userdata_string, placement=self.config['availability_zone'], instance_type=self.config['instance_type'], key_name=self.config['key_name'], security_groups=self.config['security_groups'])
+                    kwargs={"count":1, "valid_until": valid_until, "user_data": userdata_string, 
+                            "placement": self.config['availability_zone'], "instance_type": self.config['instance_type'], 
+                            "key_name": self.config['key_name']}
+                    if "subnet_id" in self.config:
+                        interface = NetworkInterfaceSpecification(subnet_id=self.config['subnet_id'],groups=self.config['security_groups'],
+                                                                  associate_public_ip_address=True)
+                        interfaces = NetworkInterfaceCollection(interface)
+                        kwargs['network_interfaces']=interfaces
+                    else:
+                        kwargs["security_group_ids"]=self.config['security_groups']
+                    req=self.conn.request_spot_instances(self.config['spot_bid'], self.config['image_id'], **kwargs)
                     log.debug("create spot request %s" % req)
                     if len(req)==0:
                         log.error("unable to create spot request")
@@ -84,10 +95,22 @@ class AWSManager(CloudManager):
                     instance.spot_id=req[0].id
                     instance.spot_state=req[0].state
                     instance.spot_price=req[0].price
+                    if "subnet_id" in self.config:
+                        instance.subnet_id=self.config['subnet_id']
+                    instance.creation_time=unix_time(datetime.datetime.strptime(req[0].create_time, "%Y-%m-%dT%H:%M:%S.%fZ"))
                     log.debug("submitted a spot request: %s"%instance)
                     new_instances.append(instance)
                 else:
-                    reservation = self.conn.run_instances(self.config['image_id'], key_name=self.config['key_name'], max_count=1, min_count=1, user_data=userdata_string, security_groups=self.config['security_groups'], instance_type=self.config['instance_type'], placement=self.config['availability_zone']) 
+                    kwargs={"key_name": self.config['key_name'], "max_count": 1, "min_count": 1, "user_data": userdata_string, 
+                            "instance_type": self.config['instance_type'], "placement": self.config['availability_zone']}
+                    if "subnet_id" in self.config:
+                        interface = NetworkInterfaceSpecification(subnet_id=self.config['subnet_id'],groups=self.config['security_groups'],
+                                                                  associate_public_ip_address=True)
+                        interfaces = NetworkInterfaceCollection(interface)
+                        kwargs['network_interfaces']=interfaces
+                    else:
+                        kwargs["security_group_ids"]=self.config['security_groups']
+                    reservation = self.conn.run_instances(self.config['image_id'], **kwargs) 
                     for server in reservation.instances:
                         server.add_tag('Name', server_name)
                         instance = Instance(server.id)
@@ -99,6 +122,8 @@ class AWSManager(CloudManager):
                         instance.security_groups=self.config['security_groups']
                         instance.availability_zone=self.config['availability_zone']
                         instance.image_uuid=self.config['image_id']
+                        if "subnet_id" in self.config:
+                            instance.subnet_id=self.config['subnet_id']
                         instance.cloud_resource=self.name
                         instance.state=self.get_state(server)
                         log.debug("launched a new instance: %s"%instance)
@@ -155,8 +180,12 @@ class AWSManager(CloudManager):
             instance.creation_time=unix_time(datetime.datetime.strptime(server.launch_time, "%Y-%m-%dT%H:%M:%S.%fZ"))
             instance.vcpu_number=get_aws_vcpu_num_by_instance_type(server.instance_type)
             if instance.state==Instance.Active:
-                instance.ip=server.ip_address
-                instance.public_dns_name=server.public_dns_name
+                if 'use_public_ip_address' in self.config and self.config['use_public_ip_address']==True:
+                    instance.ip=server.ip_address
+                    instance.dns_name=server.public_dns_name
+                else:
+                    instance.ip=server.private_ip_address
+                    instance.dns_name=hostname_lookup(instance.ip) #server.private_dns_name
                 instance.availability_zone=server.placement
                 instance.image_uuid=server.image_id
         return instance
@@ -213,8 +242,12 @@ class AWSManager(CloudManager):
                 instance.cloud_resource=self.name
                 instance.state=self.get_state(server)
                 if instance.state == Instance.Active:
-                    instance.ip=server.ip_address
-                    instance.public_dns_name=server.public_dns_name
+                    if 'use_public_ip_address' in self.config and self.config['use_public_ip_address']==True:
+                        instance.ip=server.ip_address
+                        instance.dns_name=server.public_dns_name
+                    else:
+                        instance.ip=server.private_ip_address
+                        instance.dns_name=hostname_lookup(instance.ip) #server.private_dns_name
                 instance.vcpu_number=get_aws_vcpu_num_by_instance_type(server.instance_type)
             return instances
         except:

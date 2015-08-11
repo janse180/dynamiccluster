@@ -177,6 +177,8 @@ cloud:
       key_name:
       security_groups:
       availability_zone:
+      subnet_id:
+      use_public_ip_address:
       instance_name_prefix:
       userdata_file:
       validate_certs: False
