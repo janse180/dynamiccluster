@@ -261,12 +261,12 @@ class TorqueManager(ClusterManager):
         retry=60
         while retry>0:
             node_state, s = torque_utils.check_node(wn, self.config['check_node_command'])
-            if node_state in ["drained", "down"]:
+            if node_state in ["drained", "down", "gone"]:
                 break
             retry-=1
             log.debug("state of wn %s is not populated to maui yet" % wn.hostname)
             time.sleep(1)
-        if node_state not in ["drained", "down"]:
+        if node_state not in ["drained", "down", "gone"]:
             log.error("cannot see updated state of %s in maui, try again later" % wn.hostname)
             return False
         torque_utils.remove_node_from_torque(wn, self.config['remove_node_command'])
@@ -432,6 +432,7 @@ class SGEManager(ClusterManager):
             worker_node.state_start_time=time.time()
 
     def on_instance_ready(self, worker_node, reservation):
+        log.info("workernode %s is ready now."%worker_node.hostname)
         worker_node.state=WorkerNode.Idle
         worker_node.state_start_time=time.time()
     

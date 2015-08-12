@@ -22,7 +22,7 @@ import dynamiccluster.__version__ as version
 from dynamiccluster.os_manager import OpenStackManager
 from dynamiccluster.aws_manager import AWSManager
 from dynamiccluster.hooks import run_post_command
-from dynamiccluster.exceptions import NoClusterDefinedException, ServerInitializationError, NoCloudResourceException, WorkerNodeNotFoundException
+from dynamiccluster.exceptions import NoClusterDefinedException, ServerInitializationError, NoCloudResourceException, WorkerNodeNotFoundException, InsufficientResourceException
 from dynamiccluster.resource_allocator import ResourceAllocator
 import logging
 
@@ -318,6 +318,9 @@ class DynamicEngine(threading.Thread):
             self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node}))  
     
     def on_idle(self, worker_node):
+        if worker_node.instance.state==Instance.Active:
+            log.debug("worker node %s is idle, but it is active in cloud, check its configuration state." % worker_node.hostname)
+            self.new_task(worker_node, Task(Task.UpdateConfigStatus, {"checker": self.config['dynamic-cluster']['config-checker'], "instance": worker_node.instance}))
         if self.idle_for_too_long(worker_node):
             res=self.get_resource_by_name(worker_node.instance.cloud_resource)
             current_usable_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name and w.state in [WorkerNode.Idle, WorkerNode.Busy]])
@@ -328,7 +331,9 @@ class DynamicEngine(threading.Thread):
                     self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": res, "instance": worker_node.instance}))
     
     def on_busy(self, worker_node):
-        pass
+        if worker_node.instance.state==Instance.Active:
+            log.debug("worker node %s is busy, but it is active in cloud, check its configuration state." % worker_node.hostname)
+            self.new_task(worker_node, Task(Task.UpdateConfigStatus, {"checker": self.config['dynamic-cluster']['config-checker'], "instance": worker_node.instance}))
     
     def on_error(self, worker_node):
         if worker_node.instance.state==Instance.Inexistent:    
@@ -461,11 +466,12 @@ class DynamicEngine(threading.Thread):
         status['cluster']=self.__cluster.state
         return status
 
-    def launch_new_instance(self, resource, number):
-        resources=[r for r in self.resources if r.name==resource]
-        if len(resources)<1:
-            raise NoCloudResourceException()
-        task=Task(Task.Provision, {"resource": resources[0], "number": number})
+    def launch_new_instance(self, resource_name, number):
+        resource=self.get_resource_by_name(resource_name)
+        current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==resource.name])
+        if number>resource.max_num-current_num:
+            raise InsufficientResourceException()
+        task=Task(Task.Provision, {"resource": resource, "number": number})
         self.__task_queue.put(task)
         
     def delete_worker_node(self, hostname, forced=False):
@@ -474,7 +480,7 @@ class DynamicEngine(threading.Thread):
             return
         elif worker_node.state==WorkerNode.Busy and not forced:
             raise WorkerNodeIsBusyException()
-        elif worker_node.state==WorkerNode.Error:
+        elif worker_node.state==WorkerNode.Error or worker_node.state==WorkerNode.Starting:
             self.__cluster.remove_node(worker_node, self.config['cloud'][worker_node.instance.cloud_resource]['reservation'])
             self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))
         elif (worker_node.state==WorkerNode.Busy and forced) or worker_node.state!=WorkerNode.Busy:

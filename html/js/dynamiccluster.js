@@ -4,6 +4,8 @@ function initWNView(){
 	  $('#wntab').addClass('active');
 	  $('#jtab').removeClass('active');
 	  $('#rtab').removeClass('active');
+	  $('#gtab').removeClass('active');
+	  $('#stab').removeClass('active');
 	  $("#main").html('<div class="panel panel-default"><div class="panel-heading">Worker Nodes</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead>'+
 			  '<tr><th>Hostname</th><th>Type</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>In current state for</th>'+
 			  '<th>Resource</th><th>Jobs</th></tr></thead><tbody id="wntable"></tbody></table></div></div>');
@@ -107,6 +109,8 @@ function initJobView(){
 	  $('#wntab').removeClass('active');
 	  $('#jtab').addClass('active');
 	  $('#rtab').removeClass('active');
+	  $('#gtab').removeClass('active');
+	  $('#stab').removeClass('active');
 	  $("#main").html('<div class="panel panel-default"><div class="panel-heading">Jobs</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Job Id</th><th>Name</th><th>State</th><th>Priority</th><th>Owner</th><th>Queue</th><th>Account</th><th>Property</th><th>Req. Walltime</th><th>Req. Mem</th><th>Req. Proc</th><th>Creation Time</th></tr></thead><tbody id="jtable"></tbody></table></div></div>');
 	  $.getJSON( "/job", function( data ) {
 		  var items = [];
@@ -133,6 +137,8 @@ function convertProc(p) {
 function initResourceView() {
 	  $('#wntab').removeClass('active');
 	  $('#jtab').removeClass('active');
+	  $('#gtab').removeClass('active');
+	  $('#stab').removeClass('active');
 	  $('#rtab').addClass('active');
 	  //$("#main").html('<div class="panel panel-default"><div class="panel-heading">Resources</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Job Id</th><th>Name</th><th>State</th><th>Priority</th><th>Owner</th><th>Queue</th><th>Account String</th><th>Req. Walltime</th><th>Req. Mem</th><th>Req. Proc</th><th>Creation Time</th></tr></thead><tbody id="rtable"></tbody></table></div></div>');
 	  $.getJSON( "/resource", function( data ) {
@@ -144,7 +150,7 @@ function initResourceView() {
 			  //alert(val.id);
 			  console.log(val);
 			  htmlstr+='<div class="panel panel-default" id="panel'+val.name+'"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-target="#collapse'+val.name+'" href="#collapse'+val.name+'">'+val.name+'</a></h4></div><div id="collapse'+val.name+'" class="panel-collapse collapse in"><div class="panel-body">';
-			  htmlstr+='<div style="padding: 3px; float: left; width: 70%; text-align: left;"><h5><span class="label label-primary">Type</span>'+val.type+' <span class="label label-primary">Min</span> '+val.min_num+' <span class="label label-primary">Current</span> '+val.current_num+' <span class="label label-primary">Max</span> '+val.max_num+'&nbsp;&nbsp;';
+			  htmlstr+='<div style="padding: 3px; float: left; width: 75%; text-align: left;"><h5><span class="label label-primary">Type</span>'+val.type+' <span class="label label-primary">Min</span> '+val.min_num+' <span class="label label-primary">Current</span> '+val.current_num+' <span class="label label-primary">Max</span> '+val.max_num+'&nbsp;&nbsp;';
 			  if (val.reservation_queue) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Queue</span>&nbsp;'+val.reservation_queue+'&nbsp;&nbsp;';
 			  if (val.reservation_property) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Property</span>&nbsp;'+val.reservation_property+'&nbsp;&nbsp;';
 			  if (val.reservation_account) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Account</span>&nbsp;'+val.reservation_account+'&nbsp;&nbsp;';
@@ -156,8 +162,10 @@ function initResourceView() {
 			  $.each(val.worker_nodes, function(key1, val1){
 				  console.log(val1);
 				  jobs='';
+				  ip='';
 				  if (val1.jobs) jobs=val1.jobs;
-				  htmlstr+='<tr><th><input class="checkbox" type="checkbox" value="'+val1.hostname+'"></th><th><a href=\'javascript:showWorkerNode("'+val1.hostname+'")\'>'+val1.hostname+'</a></th><td>'+val1.instance.instance_name+'</td><td>'+val1.num_proc+'</td><td>'+convertWNState(val1.state)+'</td><td>'+val1.instance.ip+'</td><td>'+convertCloudState(val1.instance.state)+'</td><td>'+jobs+'</td></tr>';
+				  if (val1.instance.ip) ip=val1.instance.ip;
+				  htmlstr+='<tr><th><input class="checkbox" type="checkbox" value="'+val1.hostname+'"></th><th><a href=\'javascript:showWorkerNode("'+val1.hostname+'")\'>'+val1.hostname+'</a></th><td>'+val1.instance.instance_name+'</td><td>'+val1.num_proc+'</td><td>'+convertWNState(val1.state)+'</td><td>'+ip+'</td><td>'+convertCloudState(val1.instance.state)+'</td><td>'+jobs+'</td></tr>';
 			  });
 			  htmlstr+='</tbody></table></div></div>';
 		  });
@@ -167,19 +175,41 @@ function initResourceView() {
 		});
 }
 
+function addAlert(type, message) {
+    $('#alertMessages').append(
+            '<div class="alert alert-'+type+' alert-dismissible">' +
+                '<button type="button" class="close" data-dismiss="alert">' +
+                '&times;</button>' + message + '</div>');
+}
+
 function addResource(res_name, num){
-	console.log(res_name+" "+n);
+	//console.log(res_name+" "+n);
 	$.ajax({
         type: "PUT",
         url: "/resource/"+res_name+"?num="+num,
         success: function(response) {
-	    console.log(response);
-	    if (response["success"]==true){
-	    	$("#successalert").show();
-	    	initResourceView();
-	    }else
-	    	$("#failalert").show();
-        }
+	    //console.log(response);
+		    if (response["success"]==true){
+		    	//$("#successalert").show();
+		    	addAlert("success", "Successfully sent a request to launch "+num+" worker node(s) in "+res_name+".");
+		    	initResourceView();
+		    }else
+		    	addAlert("danger", "Server error");
+        },
+	    error: function(jqXHR, textStatus, errorThrown) {
+	        console.log(jqXHR.status);
+	        if (jqXHR.status==404) {
+	        	addAlert("danger", "Resource "+res_name+" not found.");
+	        } else if (jqXHR.status==400) {
+	        	addAlert("danger", "You have requested "+num+" worker node(s) in "+res_name+" but it has exceeded the resource limit.");
+		    	//$("#failalert").show();
+	        } else if (jqXHR.status==500) {
+	        	addAlert("danger", "Server error");
+	        }
+	        initResourceView();
+	        //console.log(textStatus);
+	        //console.log(errorThrown);
+	    }
 	});
 	
 }
@@ -192,10 +222,10 @@ function removeResource(wn){
         success: function(response) {
 		    console.log(response);
 		    if (response["success"]==true){
-		    	$("#successalert").show();
+		    	addAlert("success", "Successfully sent a request to delete worker node "+wn+".");
 		    	initResourceView();
 		    }else
-		    	$("#failalert").show();
+		    	addAlert("danger", "Server error");
 	    }
 	});
 	
@@ -261,5 +291,21 @@ $('#removeResDialog').find('.modal-footer .btn-primary').click(function() {
 	});
 	$('#removeResDialog').modal('hide');
 });
+
+function initGraphView() {
+	  $('#wntab').removeClass('active');
+	  $('#jtab').removeClass('active');
+	  $('#gtab').addClass('active');
+	  $('#stab').removeClass('active');
+	  $('#rtab').removeClass('active');
+}
+
+function initSettingView() {
+	  $('#wntab').removeClass('active');
+	  $('#jtab').removeClass('active');
+	  $('#gtab').removeClass('active');
+	  $('#stab').addClass('active');
+	  $('#rtab').removeClass('active');
+}
 
 initWNView();

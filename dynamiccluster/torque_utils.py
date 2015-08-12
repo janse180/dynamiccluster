@@ -99,6 +99,9 @@ def check_node(wn, check_node_command):
                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (cmd_out, cmd_err) = sp.communicate(input=None)
         returncode = sp.returncode
+        if returncode == 1 and "cannot locate node" in cmd_err:
+            log.error("node %s doesn't exist in maui." % wn.hostname)
+            return "gone", 0
         if returncode != 0:
             log.error("checknode returns error, probably the node does not exist. returncode %s" % returncode)
             log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))

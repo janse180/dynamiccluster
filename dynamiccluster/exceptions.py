@@ -39,3 +39,6 @@ class PluginInitialisationError(Exception):
 
 class GraphiteReporterError(Exception):
     pass
+
+class InsufficientResourceException(Exception):
+    pass

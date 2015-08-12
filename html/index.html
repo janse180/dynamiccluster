@@ -55,18 +55,13 @@
             <li id="wntab" class="active"><a href="javascript:initWNView()">Worker Nodes</a></li>
             <li id="jtab"><a href="javascript:initJobView()">Jobs</a></li>
             <li id="rtab"><a href="javascript:initResourceView()">Resources</a></li>
+            <li id="gtab"><a href="javascript:initGraphView()">Graphs</a></li>
+            <li id="stab"><a href="javascript:initSettingView()">Setting</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
     </nav>
-	<div class="alert alert-success alert-dismissible" role="alert" style="display:none;" id="successalert">
-	  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	  <strong>Success!</strong> A request has been sent.
-	</div>
-	<div class="alert alert-error alert-dismissible" role="alert" style="display:none;" id="failalert">
-	  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	  <strong>Failed!</strong> Unable to send a request, please try again.
-	</div>
+    <div id="alertMessages"></div>
     <div class="container" style="width: 1350px">
       <!-- Main component for a primary marketing message or call to action 
       <p>&nbsp;</p>

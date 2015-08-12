@@ -2,7 +2,7 @@
 from bottle import route, run, static_file, abort, request
 import threading
 from dynamiccluster.utilities import getLogger
-from dynamiccluster.exceptions import NoCloudResourceException
+from dynamiccluster.exceptions import NoCloudResourceException, InsufficientResourceException
 import os
 
 log = getLogger(__name__)
@@ -128,8 +128,10 @@ class AdminServer(threading.Thread):
             engine.launch_new_instance(res, number)
             return {"success":True}
         except NoCloudResourceException:
-            abort(500, "Cloud resource not found")
-        abort(400, "Unknown error")
+            abort(404, "Cloud resource not found")
+        except InsufficientResourceException:
+            abort(400, "Resource limit exceeded.")
+        abort(500, "Unknown error")
     
     def __init__(self, dynaimc_engine=None, working_path=""):
         threading.Thread.__init__(self, name=self.__class__.__name__)
