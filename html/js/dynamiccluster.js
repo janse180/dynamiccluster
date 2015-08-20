@@ -155,7 +155,8 @@ function initResourceView() {
 			  if (val.reservation_property) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Property</span>&nbsp;'+val.reservation_property+'&nbsp;&nbsp;';
 			  if (val.reservation_account) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Account</span>&nbsp;'+val.reservation_account+'&nbsp;&nbsp;';
 			  htmlstr+='<button type="button" class="btn btn-success btn-sm" id="addbutton'+val.name+'" data-toggle="modal" data-target="#addResDialog" data-whatever="'+val.name+'">Add</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="removebutton'+val.name+'" data-toggle="modal" data-target="#removeResDialog" data-whatever="'+val.name+'">Remove</button></h5></div>';
+			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="removebutton'+val.name+'" data-toggle="modal" data-target="#removeResDialog" data-whatever="'+val.name+'">Remove</button>&nbsp;';
+			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="holdbutton'+val.name+'" data-toggle="modal" data-target="#holdResDialog" data-whatever="'+val.name+'">Hold</button></h5></div>';
 			  percentage=parseInt(val.current_num*100/val.max_num);
 			  htmlstr+='<div class="progress"><div class="progress-bar" role="progressbar" aria-valuenow="'+percentage+'" aria-valuemin="0" aria-valuemax="100" style="width: '+percentage+'%;">'+percentage+'%</div></div></div>';
 			  htmlstr+='<table class="table table-striped table-condensed" id="table'+val.name+'"><thead><tr><th>&nbsp;</th><th>Hostname</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>Jobs</th></tr></thead><tbody>';
@@ -306,6 +307,111 @@ function initSettingView() {
 	  $('#gtab').removeClass('active');
 	  $('#stab').addClass('active');
 	  $('#rtab').removeClass('active');
+	  $("#main").html('<div id="statusdiv" class="panel panel-default"></div>'+
+			  '<div id="configdiv" class="panel panel-default"></div>');
+	  showServerStatus();
+	  $.getJSON( "/server/config", function( data ) {
+		  console.log(data);
+		  htmlStr='<div class="panel-heading"><h3 class="panel-title">Server Config</h3></div><table class="table table-condensed"><tr><th colspan="2">General</th></tr>';
+		  $.each( data['dynamic-cluster'], function( key, val ) {
+			  if (typeof val === 'object') {
+				  htmlStr+='<tr><td class="info">'+key+'</td><td>'+JSON.stringify(val)+'</td></tr>';
+			  }else
+				  htmlStr+='<tr><td class="info">'+key+'</td><td>'+val+'</td></tr>';
+		  });
+		  htmlStr+='<tr><th colspan="2">Cluster: '+data['cluster']['type']+'</th></tr>';
+		  $.each( data['cluster']['config'], function( key, val ) {
+			  if (typeof val === 'object') {
+				  htmlStr+='<tr><td class="info">'+key+'</td><td>'+JSON.stringify(val)+'</td></tr>';
+			  }else
+				  htmlStr+='<tr><td class="info">'+key+'</td><td>'+val+'</td></tr>';
+		  });
+		  $.each( data['cloud'], function( key, val ) {
+			  htmlStr+='<tr><th colspan="2">Cloud Resource: '+key+'</th></tr>';
+			  $.each( val, function( key1, val1 ) {
+				  if (typeof val1 === 'object') {
+					  htmlStr+='<tr><td class="info">'+key1+'</td><td>'+dictToTable(val1)+'</td></tr>';
+				  }else
+					  htmlStr+='<tr><td class="info">'+key1+'</td><td>'+val1+'</td></tr>';
+			  });
+		  });
+		  $.each( data['plugins'], function( key, val ) {
+			  htmlStr+='<tr><th colspan="2">Plugin: '+key+'</th></tr>';
+			  $.each( val, function( key1, val1 ) {
+				  if (typeof val1 === 'object') {
+					  htmlStr+='<tr><td class="info">'+key1+'</td><td>'+dictToTable(val1)+'</td></tr>';
+				  }else
+					  htmlStr+='<tr><td class="info">'+key1+'</td><td>'+val1+'</td></tr>';
+			  });
+		  });
+		  htmlStr+='<tr><th colspan="2">Logging</th></tr>';
+		  $.each( data['logging'], function( key, val ) {
+			  if (typeof val === 'object') {
+				  htmlStr+='<tr><td class="info">'+key+'</td><td>'+JSON.stringify(val)+'</td></tr>';
+			  }else
+				  htmlStr+='<tr><td class="info">'+key+'</td><td>'+val+'</td></tr>';
+		  });
+		  htmlStr+='</table>';
+		  $("#configdiv").html(htmlStr);
+	  });
+}
+
+function dictToTable(obj){
+	htmlStr='<table class="table">';
+	$.each( obj, function( key, val ) {
+		if (key!='password'&&key!='secret_access_key') {
+			if (typeof val === 'object') 
+				htmlStr+='<tr><td class="active">'+key+'</td><td>'+JSON.stringify(val)+'</td></tr>';
+			else
+				htmlStr+='<tr><td class="active">'+key+'</td><td>'+val+'</td></tr>';
+		}
+	});
+	htmlStr+='</table>';
+	return htmlStr;
+}
+function showServerStatus() {
+	$.getJSON( "/server/status", function( data ) {
+		console.log(data);
+		htmlStr='<div class="panel-heading"><h3 class="panel-title">Runtime Status</h3></div><table class="table table-condensed"><tr><th class="info">Auto Mode</th><td>';
+		htmlStr+=data['auto_mode']+'</td><td><button type="button" class="btn btn-success btn-sm" id="autobutton" data-whatever="'+data['auto_mode']+'">';
+		if (data['auto_mode']==true) {
+			htmlStr+="Disable";
+		}else{
+			htmlStr+="Enable";
+		}
+		htmlStr+='</button></td></tr><tr><th class="info">Cluster</th><td>'+dictToTable(data['cluster']);
+//		$.each( data['cluster'], function( key, val ) {
+//			htmlStr+='<b>'+key+'</b>: '+val+'; ';
+//		});
+		htmlStr+='</td><td>&nbsp;</td></tr></table>';
+		$("#statusdiv").html(htmlStr);
+		$('#autobutton').click(function() {
+			var current_state = $(this).data('whatever');
+			console.log(current_state);
+			setAutoMode(!current_state);
+		});
+	});
+}
+
+
+function setAutoMode(auto_mode){
+	req_type='PUT';
+	if (auto_mode==false) {
+		req_type='DELETE';
+	}
+	$.ajax({
+        type: req_type,
+        url: "/server/auto",
+        success: function(response) {
+		    console.log(response);
+		    if (response["success"]==true){
+		    	addAlert("success", "Successfully set auto node to "+auto_mode+".");
+		    	showServerStatus();
+		    }else
+		    	addAlert("danger", "Failed to set auto node to "+auto_mode+".");
+	    }
+	});
+	
 }
 
 initWNView();

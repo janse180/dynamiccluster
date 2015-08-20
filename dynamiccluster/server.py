@@ -82,7 +82,7 @@ class DynamicServer(Daemon):
             log.debug("plugins %s" % plugins)
             for plugin_name,plugin in plugins.iteritems():
                 class_name=plugin['class_name']
-                arguments=plugin['arguments']
+                arguments=plugin['arguments'].copy()
                 arguments['_info']=self.info
                 self.__plugin_objects.append(init_object(class_name, **arguments))
         for plugin_obj in self.__plugin_objects:
@@ -487,3 +487,7 @@ class DynamicEngine(threading.Thread):
             self.__cluster.hold_node(worker_node)
             worker_node.state=WorkerNode.Holding
 
+    def hold_worker_node(self, hostname):
+        worker_node=self.get_worker_node_by_hostname(hostname)
+        self.__cluster.hold_node(worker_node)
+        worker_node.state=WorkerNode.Holding

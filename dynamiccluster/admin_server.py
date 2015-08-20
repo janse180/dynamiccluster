@@ -52,6 +52,15 @@ class AdminServer(threading.Thread):
             abort(404, "worker node not found")
         return repr(list[0])
     
+    @route('/workernode/:hostname/:action', method="PUT")
+    def delete_worker_node(hostname, action):
+        global engine
+        list=[w for w in engine.info.worker_nodes if w.hostname==hostname]
+        if len(list)==0:
+            abort(404, "worker node not found")
+        engine.hold_worker_node(hostname)
+        return {"success":True}
+    
     @route('/workernode/:hostname', method="DELETE")
     def delete_worker_node(hostname):
         global engine
@@ -79,6 +88,7 @@ class AdminServer(threading.Thread):
     @route('/server/config')
     def get_server_config():
         global engine
+        log.debug(engine.config)
         return engine.config
     
     @route('/server/status')
