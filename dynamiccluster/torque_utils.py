@@ -257,3 +257,38 @@ def release_res_for_node(wn, res_name, releaseres_command):
     except:
         log.exception("Problem running %s, unexpected error" % release_node)
         return
+
+def delete_job(jobid, del_job_command):
+    log.debug("deleting job %s"%jobid)
+    del_job = del_job_command.format(jobid)
+    log.debug("cmd %s"%del_job)
+    try:
+        sp = subprocess.Popen(del_job, shell=True,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+#           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
+        if returncode != 0:
+            log.error("Error deleting job %s, return code %s"%(jobid, returncode))
+            log.debug("cmd_out %s cmd_err %s"%(cmd_out, cmd_err))
+    except:
+        log.exception("Problem running %s, unexpected error" % del_job)
+        return
+
+def signal_job(jobid, signal, signal_job_command):
+    log.debug("sending signal %s to job %s"%(signal,jobid))
+    qsig_job = signal_job_command.format(signal, jobid)
+    log.debug("cmd %s"%qsig_job)
+    try:
+        sp = subprocess.Popen(qsig_job, shell=True,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+#           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
+        if returncode != 0:
+            log.error("Error sending signal %s to job %s, return code %s"%(signal, jobid, returncode))
+            log.debug("cmd_out %s cmd_err %s"%(cmd_out, cmd_err))
+    except:
+        log.exception("Problem running %s, unexpected error" % qsig_job)
+        return
+    

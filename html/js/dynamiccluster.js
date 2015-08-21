@@ -156,7 +156,9 @@ function initResourceView() {
 			  if (val.reservation_account) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Account</span>&nbsp;'+val.reservation_account+'&nbsp;&nbsp;';
 			  htmlstr+='<button type="button" class="btn btn-success btn-sm" id="addbutton'+val.name+'" data-toggle="modal" data-target="#addResDialog" data-whatever="'+val.name+'">Add</button>&nbsp;';
 			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="removebutton'+val.name+'" data-toggle="modal" data-target="#removeResDialog" data-whatever="'+val.name+'">Remove</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="holdbutton'+val.name+'" data-toggle="modal" data-target="#holdResDialog" data-whatever="'+val.name+'">Hold</button></h5></div>';
+			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="holdbutton'+val.name+'" data-toggle="modal" data-target="#holdResDialog" data-whatever="'+val.name+'">Hold</button>&nbsp;';
+			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="unholdbutton'+val.name+'" data-toggle="modal" data-target="#holdResDialog" data-whatever="'+val.name+'">Unhold</button>&nbsp;';
+			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="vocatebutton'+val.name+'" data-toggle="modal" data-target="#holdResDialog" data-whatever="'+val.name+'">Vocate</button></h5></div>';
 			  percentage=parseInt(val.current_num*100/val.max_num);
 			  htmlstr+='<div class="progress"><div class="progress-bar" role="progressbar" aria-valuenow="'+percentage+'" aria-valuemin="0" aria-valuemax="100" style="width: '+percentage+'%;">'+percentage+'%</div></div></div>';
 			  htmlstr+='<table class="table table-striped table-condensed" id="table'+val.name+'"><thead><tr><th>&nbsp;</th><th>Hostname</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>Jobs</th></tr></thead><tbody>';
@@ -227,6 +229,13 @@ function removeResource(wn){
 		    	initResourceView();
 		    }else
 		    	addAlert("danger", "Server error");
+	    },
+	    error: function(jqXHR, textStatus, errorThrown) {
+	        console.log(jqXHR);
+	        console.log(jqXHR.status);
+	        console.log(textStatus);
+	        console.log(errorThrown);
+	        addAlert("danger", jqXHR.responseText);
 	    }
 	});
 	

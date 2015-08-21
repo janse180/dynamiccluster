@@ -16,6 +16,9 @@ class DuplicatedWorkerNodeException(Exception):
 class CloudResourceNotFoundException(Exception):
     pass
 
+class InvalidStateWhenDeleteWorkerNodeException(Exception):
+    pass
+
 class DuplicatedCloudResourceException(Exception):
     pass
 

@@ -17,22 +17,54 @@ class ClusterManager(object):
         self.config=config
         self.state=state
     def get_state(self):
+        """
+        get cluster's state
+        """
         return self.state
     def get_config(self):
+        """
+        get cluster's config
+        """
         return self.config
     def update_worker_nodes(self, worker_node_list):
+        """
+        update existing worker nodes' status
+        """
         assert 0, 'Must define update_worker_nodes'
     def query_jobs(self):
+        """
+        get a list of queued jobs
+        """
         assert 0, 'Must define query_jobs'
     def on_instance_active(self, worker_node, reservation):
+        """
+        this is called once the node is provisioned by the cloud (e.g. it is booting up but IP is available at this moment)
+        """
         pass
     def on_instace_ready(self, worker_node, reservation):
+        """
+        this is called once the node is ready (configuration finished)
+        """
         pass
     def add_node(self, node, reservation):
+        """
+        add the node to cluster with reservation
+        """
         assert 0, 'Must define add_node'
     def hold_node(self, node):
+        """
+        hold the node from cluster so that it won't accept new jobs, existing jobs keep running
+        """
         assert 0, 'Must define hold_node'
     def remove_node(self, node):
+        """
+        remove the node from cluster
+        """
+        assert 0, 'Must define remove_node'
+    def vacate_node(self, node):
+        """
+        kill all jobs on this node (so it can be removed etc)
+        """
         assert 0, 'Must define remove_node'
     
 class TorqueManager(ClusterManager):
@@ -276,6 +308,12 @@ class TorqueManager(ClusterManager):
         log.debug("hold node %s in cluster" % wn)
         torque_utils.hold_node_in_torque(wn, self.config['pbsnodes_command'])
 
+    def vocate_node(self, wn):
+        if wn.jobs is None:
+            return
+        for jobid in wm.jobs:
+            torque_utils.signal_job(jobid, "9", self.config['signal_job_command'])
+            torque_utils.delete_job(jobid, self.config['delete_job_command'])
 
 class SGEManager(ClusterManager):
     def __init__(self, config):

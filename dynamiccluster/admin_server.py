@@ -1,8 +1,8 @@
 
-from bottle import route, run, static_file, abort, request
+from bottle import route, run, static_file, abort, request, HTTPError, HTTPResponse
 import threading
 from dynamiccluster.utilities import getLogger
-from dynamiccluster.exceptions import NoCloudResourceException, InsufficientResourceException
+from dynamiccluster.exceptions import *
 import os
 
 log = getLogger(__name__)
@@ -43,31 +43,43 @@ class AdminServer(threading.Thread):
             return repr([w for w in engine.info.worker_nodes if w.state==int(state)])
         return repr(engine.info.worker_nodes)
 
-    @route('/workernode/:hostname')
+    @route('/workernode/<hostname>')
     def get_workernodes(hostname):
         global engine
         #log.debug(data.__dict__)
         list=[w for w in engine.info.worker_nodes if w.hostname==hostname]
         if len(list)==0:
-            abort(404, "worker node not found")
+            return HTTPResponse(status=404, body="worker node %s not found" % hostname)
         return repr(list[0])
     
     @route('/workernode/:hostname/:action', method="PUT")
-    def delete_worker_node(hostname, action):
+    def manipulate_worker_node(hostname, action):
         global engine
         list=[w for w in engine.info.worker_nodes if w.hostname==hostname]
         if len(list)==0:
-            abort(404, "worker node not found")
-        engine.hold_worker_node(hostname)
+            return HTTPResponse(status=404, body="worker node %s not found" % hostname)
+        if action=="hold":
+            engine.hold_worker_node(hostname)
+        elif action=="unload":
+            engine.unhold_worker_node(hostname)
+        elif action=="vocate":
+            engine.vocate_worker_node(hostname)
+        else:
+            return HTTPResponse(status=404, body="action not supported")
         return {"success":True}
     
     @route('/workernode/:hostname', method="DELETE")
     def delete_worker_node(hostname):
         global engine
-        list=[w for w in engine.info.worker_nodes if w.hostname==hostname]
-        if len(list)==0:
-            abort(404, "worker node not found")
-        engine.delete_worker_node(hostname)
+        try:
+            engine.delete_worker_node(hostname)
+        except WorkerNodeNotFoundException:
+            return HTTPResponse(status=404, body="worker node %s not found" % hostname)
+        except InvalidStateWhenDeleteWorkerNodeException:
+            log.debug("can't delete %s in current state."%hostname)
+            return HTTPResponse(status=400, body="worker node %s cannot be deleted in current state" % hostname)
+        except:
+            return HTTPResponse(status=500, body="server error")
         return {"success":True}
     
     @route('/job')
@@ -150,6 +162,7 @@ class AdminServer(threading.Thread):
         global root_path
         root_path=working_path
         self.__port=engine.config['dynamic-cluster']['admin-server']['port']
+        self.__debug=engine.config['dynamic-cluster']['admin-server'].get('debug', True)
         
     def run(self):
-        run(host='0.0.0.0', port=self.__port, debug=True)
+        run(host='0.0.0.0', port=self.__port, debug=self.__debug)

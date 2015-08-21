@@ -81,7 +81,13 @@ cluster:
     
     # the command to unset account_string in a node
     releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | grep {1} | awk '{{print $3}}' `
-  
+
+    # the command to delete a job
+    delete_job_command: /usr/bin/qdel -p {0}
+
+    # the command to send a signal to a job
+    signal_job_command: /usr/bin/qsig -s {0} {1}
+      
     # a script to be executed after adding a node to Torque (just before setting it to online) 
     #  it takes two parameters which are the hostname of the VM and the IP of the VM
     #post_add_node_command: /the/path/some.sh {0} {1}
