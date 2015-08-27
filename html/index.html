@@ -28,6 +28,28 @@
 	.panel-heading a.collapsed:after {
 	    content: "\e080";
 	}	
+
+/* make sidebar nav vertical */ 
+@media (min-width: 768px) {
+  .sidebar-nav .navbar .navbar-collapse {
+    padding: 0;
+    max-height: none;
+  }
+  .sidebar-nav .navbar ul {
+    float: none;
+  }
+  .sidebar-nav .navbar ul:not {
+    display: block;
+  }
+  .sidebar-nav .navbar li {
+    float: none;
+    display: block;
+  }
+  .sidebar-nav .navbar li a {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
 	</style>
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -62,7 +84,7 @@
       </div>
     </nav>
     <div id="alertMessages"></div>
-    <div class="container" style="width: 1350px">
+    <div class="container-fluid">
       <!-- Main component for a primary marketing message or call to action 
       <p>&nbsp;</p>
       <p>&nbsp;</p>
@@ -93,7 +115,7 @@
       <div id="main" width="100%"></div>
 	<!-- Modal -->
 	<div id="infoDialog" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	  <div class="modal-dialog">
+	  <div class="modal-dialog modal-lg">
 	    <div class="modal-content">
 	      <div class="modal-header">
 	        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -132,18 +154,19 @@
 	    </div>
 	  </div>
   	</div>
-	<div id="removeResDialog" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="removeResModal" aria-hidden="true">
+	<div id="modifyResDialog" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modifyResModal" aria-hidden="true">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
 	      <div class="modal-header">
 	        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	        <h4 class="modal-title" id="removeResModalLabel">Delete Worker Nodes:</h4>
+	        <h4 class="modal-title" id="modifyResModalLabel">Selected Worker Nodes:</h4>
 	      </div>
-	      <div class="modal-body" id="removeResModalMain">
+	      <div class="modal-body" id="modifyResModalMain">
 	          Do you really want to remove the following worker nodes?
 	          	<ul id="removeList"></ul>
 	      </div>
 	      <div class="modal-footer">
+	        <input type="hidden" id="dialogAction">
 	        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 	        <button type="button" class="btn btn-primary">Yes</button>
 	      </div>
@@ -173,6 +196,7 @@
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug 
     <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
     -->
+    <script src="js/config.js"></script> 
     <script src="js/dynamiccluster.js"></script>
   </body>
 </html>

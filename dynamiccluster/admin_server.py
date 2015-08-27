@@ -1,7 +1,7 @@
 
-from bottle import route, run, static_file, abort, request, HTTPError, HTTPResponse
+from bottle import route, run, static_file, request, HTTPError, HTTPResponse
 import threading
-from dynamiccluster.utilities import getLogger
+from dynamiccluster.utilities import getLogger, get_prefix
 from dynamiccluster.exceptions import *
 import os
 
@@ -17,17 +17,25 @@ class AdminServer(threading.Thread):
         log.debug("get dashboard index page. %s" % root_path+os.sep+'html')
         return static_file("index.html", root=root_path+os.sep+'html')
 
-    @route('/js/:page', method='GET')
+    @route('/js/<page>', method='GET')
     def get_js_page(page):
         global root_path
         log.debug("static js page to return %s"%(page))
+        if page=="config.js":
+            if 'graphite' in engine.config['plugins']:
+                graph_view=True
+                graphite_prefix=engine.config['plugins']['graphite']['arguments']['prefix']
+                graphite_hostname=engine.config['plugins']['graphite']['arguments']['hostname']
+                wn_prefix=get_prefix([r.config['instance_name_prefix'] for r in engine.resources])
+                return "var graph_view=true;\nvar graphite_prefix='"+graphite_prefix+"';\nvar graphite_hostname='"+graphite_hostname+"';\nvar wn_prefix='"+wn_prefix+"';"
+            return "var graph_view=false;"
         return static_file(page, root=root_path+os.sep+'html'+os.sep+'js')
-    @route('/css/:page', method='GET')
-    def get_js_page(page):
+    @route('/css/<page>', method='GET')
+    def get_css_page(page):
         global root_path
         log.debug("static css page to return %s"%(page))
         return static_file(page, root=root_path+os.sep+'html'+os.sep+'css')
-    @route('/fonts/:page', method='GET')
+    @route('/fonts/<page>', method='GET')
     def get_fonts_page(page):
         global root_path
         log.debug("static fonts page to return %s"%(page))
@@ -52,32 +60,41 @@ class AdminServer(threading.Thread):
             return HTTPResponse(status=404, body="worker node %s not found" % hostname)
         return repr(list[0])
     
-    @route('/workernode/:hostname/:action', method="PUT")
+    @route('/workernode/<hostname>/<action>', method="PUT")
     def manipulate_worker_node(hostname, action):
         global engine
         list=[w for w in engine.info.worker_nodes if w.hostname==hostname]
         if len(list)==0:
             return HTTPResponse(status=404, body="worker node %s not found" % hostname)
-        if action=="hold":
-            engine.hold_worker_node(hostname)
-        elif action=="unload":
-            engine.unhold_worker_node(hostname)
-        elif action=="vocate":
-            engine.vocate_worker_node(hostname)
-        else:
-            return HTTPResponse(status=404, body="action not supported")
+        log.debug("%s %s"%(action,hostname))
+        try:
+            if action=="hold":
+                engine.hold_worker_node(hostname)
+            elif action=="unhold":
+                engine.unhold_worker_node(hostname)
+            elif action=="vacate":
+                engine.vacate_worker_node(hostname)
+            else:
+                return HTTPResponse(status=404, body="action not supported")
+        except WorkerNodeNotFoundException:
+            return HTTPResponse(status=404, body="worker node %s not found" % hostname)
+        except InvalidStateException:
+            return HTTPResponse(status=400, body="You are not allowed to %s worker node %s in current state." % (action, hostname))
+        except:
+            log.exception("unable to %s worker node %s"%(action, hostname))
+            return HTTPResponse(status=500, body="server error")
         return {"success":True}
     
-    @route('/workernode/:hostname', method="DELETE")
+    @route('/workernode/<hostname>', method="DELETE")
     def delete_worker_node(hostname):
         global engine
         try:
             engine.delete_worker_node(hostname)
         except WorkerNodeNotFoundException:
             return HTTPResponse(status=404, body="worker node %s not found" % hostname)
-        except InvalidStateWhenDeleteWorkerNodeException:
+        except InvalidStateException:
             log.debug("can't delete %s in current state."%hostname)
-            return HTTPResponse(status=400, body="worker node %s cannot be deleted in current state" % hostname)
+            return HTTPResponse(status=400, body="worker node %s cannot be deleted in current state, please put it on hold first." % hostname)
         except:
             return HTTPResponse(status=500, body="server error")
         return {"success":True}
@@ -88,13 +105,13 @@ class AdminServer(threading.Thread):
         #log.debug(data.__dict__)
         return repr(engine.info.queued_jobs)
 
-    @route('/job/:id')
+    @route('/job/<id>')
     def get_jobs(id):
         global engine
         #log.debug(data.__dict__)
         list=[j for j in engine.info.queued_jobs if j.jobid==id]
         if len(list)==0:
-            abort(404, "job not found")
+            return HTTPResponse(status=404, body="job not found")
         return repr(list[0])
     
     @route('/server/config')
@@ -125,12 +142,12 @@ class AdminServer(threading.Thread):
         global engine
         res_list=engine.resources
         if len(res_list)==0:
-            abort(404, "resource %s not found" % res_name)
+            return HTTPResponse(status=404, body="resource %s not found" % res_name)
         for res in res_list:
             res.worker_nodes=[w for w in engine.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name]
         return repr(engine.resources)
  
-    @route('/resource/:res_name', method="GET")
+    @route('/resource/<res_name>', method="GET")
     def get_resource(res_name):
         global engine
         res_list=[r for r in engine.resources if r.name==res_name]
@@ -138,7 +155,7 @@ class AdminServer(threading.Thread):
             res.worker_nodes=[w for w in engine.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name]
         return repr(res_list[0])
    
-    @route('/resource/:res', method="PUT")
+    @route('/resource/<res>', method="PUT")
     def add_instace_to_res(res):
         num_string = request.query.num
         number=1
@@ -150,10 +167,10 @@ class AdminServer(threading.Thread):
             engine.launch_new_instance(res, number)
             return {"success":True}
         except NoCloudResourceException:
-            abort(404, "Cloud resource not found")
+            return HTTPResponse(status=404, body="Cloud resource %s not found"%res)
         except InsufficientResourceException:
-            abort(400, "Resource limit exceeded.")
-        abort(500, "Unknown error")
+            return HTTPResponse(status=400, body="You have requested %d worker node(s) in %s but it has exceeded the resource limit."%(num_string,res))
+        return HTTPResponse(status=500, body="Unknown error")
     
     def __init__(self, dynaimc_engine=None, working_path=""):
         threading.Thread.__init__(self, name=self.__class__.__name__)

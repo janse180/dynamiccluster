@@ -14,17 +14,17 @@ class ResourceAllocator(object):
         pending_jobs.sort(key=lambda job: job.priority, reverse=True)
         tasks=[]
         for job in pending_jobs:
-            avail_resources=[r for r in resources]
+            avail_resources=set(resources[:])
             if job.queue is not None:
-                avail_resources=[r for r in avail_resources if r.reservation_queue is None or r.reservation_queue==job.queue]
+                avail_resources=avail_resources&set([r for r in avail_resources if r.reservation_queue is None or r.reservation_queue==job.queue])
             if job.account is not None:
-                avail_resources=[r for r in avail_resources if r.reservation_account is None or r.reservation_account==job.account]
+                avail_resources=avail_resources&set([r for r in avail_resources if r.reservation_account is None or r.reservation_account==job.account])
             if job.property is not None:
-                avail_resources=[r for r in avail_resources if r.reservation_property is None or r.reservation_property==job.property]
+                avail_resources=avail_resources&set([r for r in avail_resources if r.reservation_property is None or r.reservation_property==job.property])
             if len(avail_resources)==0:
                 log.notice("cannot find a suitable resource for job %s" % job.jobid)
                 continue
-            avail_resources.sort(key=lambda r: r.priority)
+            avail_resources=sorted(avail_resources, key=lambda r: (r.priority, r.current_num))
             for res in avail_resources:
                 if res.proposed_allocation is None:
                     res.proposed_allocation=[]

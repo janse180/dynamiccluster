@@ -84,6 +84,7 @@ class DynamicServer(Daemon):
                 class_name=plugin['class_name']
                 arguments=plugin['arguments'].copy()
                 arguments['_info']=self.info
+                arguments['_resource']=self.config['cloud']
                 self.__plugin_objects.append(init_object(class_name, **arguments))
         for plugin_obj in self.__plugin_objects:
             #plugin_obj.daemon=True
@@ -122,7 +123,7 @@ class DynamicEngine(threading.Thread):
         self.info=info
         self.__running=True
         self.__cluster=None
-        self.__auto=True
+        self.__auto=self.config['dynamic-cluster'].get('auto_mode', True)
         self.resources=[]
         self.__task_queue=task_queue
         self.__result_queue=result_queue
@@ -268,6 +269,9 @@ class DynamicEngine(threading.Thread):
     def down_for_too_long(self, worker_node):
         return worker_node.time_in_current_state>self.__max_down_time or (worker_node.state_start_time>0 and time.time()-worker_node.state_start_time>self.__max_down_time)
 
+    def is_provisioning(self):
+        return len([w for w in self.info.worker_nodes if w.state==WorkerNode.Starting])>0
+    
     def run_post_vm_destroy_command(self, worker_node):
         if "post_vm_destroy_command" in self.config['dynamic-cluster']:
             run_post_command(worker_node, self.config['dynamic-cluster']["post_vm_destroy_command"])
@@ -282,10 +286,11 @@ class DynamicEngine(threading.Thread):
         """
         transit a state to another by a new task
         """
-        worker_node.instance.tasked=True
         worker_node.state=state
         worker_node.state_start_time=time.time()
-        self.__task_queue.put(task)
+        if task:
+            worker_node.instance.tasked=True
+            self.__task_queue.put(task)
         
     def new_task(self, worker_node, task):
         """
@@ -315,7 +320,7 @@ class DynamicEngine(threading.Thread):
                 self.new_task(worker_node, Task(Task.UpdateConfigStatus, {"checker": self.config['dynamic-cluster']['config-checker'], "instance": worker_node.instance}))
         elif time.time()-worker_node.instance.creation_time>self.__max_launch_time:
             log.debug("it takes too long for worker node %s to launch, kill it" % worker_node.hostname)
-            self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node}))  
+            self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))  
     
     def on_idle(self, worker_node):
         if worker_node.instance.state==Instance.Active:
@@ -327,6 +332,7 @@ class DynamicEngine(threading.Thread):
             log.notice("update current_usable_num of res %s: %s" % (res.name,current_usable_num))
             if current_usable_num>res.min_num:
                 log.debug("worker node %s has been idle for too long and the resource has more nodes than minimal requirement, hold it and delete it" % worker_node.hostname)
+                self.transit(worker_node, WorkerNode.Holding, None)
                 self.__cluster.hold_node(worker_node)
 #                 if self.__cluster.remove_node(worker_node, self.config['cloud'][worker_node.instance.cloud_resource]['reservation']):
 #                     self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": res, "instance": worker_node.instance}))
@@ -377,12 +383,14 @@ class DynamicEngine(threading.Thread):
         log.debug("trying to hold worker node %s" % worker_node.hostname)
     
     def on_held(self, worker_node):
+        if not self.__auto:
+            return
         if worker_node.jobs is not None and len(worker_node.jobs)>0:
             log.debug("worker node %s has running jobs, can't delete it now, need to wait for all jobs to finish" % worker_node.hostname)
             return
         res=self.get_resource_by_name(worker_node.instance.cloud_resource)
         current_usable_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name and w.state in [WorkerNode.Idle, WorkerNode.Busy]])
-        log.notice("update current_usable_num of res %s: %s" % (res.name,current_usable_num))
+        log.debug("update current_usable_num of res %s: %s" % (res.name,current_usable_num))
         if current_usable_num+1>res.min_num:
             log.debug("held worker node %s and it has no running jobs, delete it" % worker_node.hostname)
             if self.__cluster.remove_node(worker_node, self.config['cloud'][worker_node.instance.cloud_resource]['reservation']):
@@ -438,13 +446,13 @@ class DynamicEngine(threading.Thread):
                 log.debug("resource %s has less worker nodes than min value, launch more" % res.name)
                 task=Task(Task.Provision, {"resource": res, "number": res.min_num-res.current_num})
                 self.__task_queue.put(task)
-        if self.__auto:
-            free_resources=[]
-            for res in self.resources:
-                if not self.has_starting_worker_nodes(res.name):
-                    free_resources.append(res)
+        if self.__auto and not self.is_provisioning():
+#             free_resources=[]
+#             for res in self.resources:
+#                 if not self.has_starting_worker_nodes(res.name):
+#                     free_resources.append(res)
             try:
-                tasks=self.__resource_allocator.allocate(self.info.queued_jobs, free_resources, self.info.worker_nodes)
+                tasks=self.__resource_allocator.allocate(self.info.queued_jobs, self.resources, self.info.worker_nodes)
                 for task in tasks:
                     log.debug("tasks from resource allocator: %s"%task)
                     self.__task_queue.put(task)
@@ -500,17 +508,20 @@ class DynamicEngine(threading.Thread):
                 self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))
         else:
             log.debug("can't delete worker node in current state: %s"%worker_node)
-            raise InvalidStateWhenDeleteWorkerNodeException()
+            raise InvalidStateException()
         
     def hold_worker_node(self, hostname):
         worker_node=self.get_worker_node_by_hostname(hostname)
+        if worker_node.state not in [WorkerNode.Idle, WorkerNode.Busy]:
+            raise InvalidStateException()
+        self.transit(worker_node, WorkerNode.Holding, None)
         self.__cluster.hold_node(worker_node)
-        worker_node.state=WorkerNode.Holding
         
     def unhold_worker_node(self, hostname):
         worker_node=self.get_worker_node_by_hostname(hostname)
-        self.__cluster.hold_node(worker_node)
-        worker_node.state=WorkerNode.Holding
+        if worker_node.state!=WorkerNode.Held:
+            raise InvalidStateException()
+        self.__cluster.unhold_node(worker_node)
         
     def vacate_worker_node(self, hostname):
         worker_node=self.get_worker_node_by_hostname(hostname)

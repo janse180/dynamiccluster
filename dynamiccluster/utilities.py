@@ -104,3 +104,16 @@ def init_object(class_name, **kwargs):
             "Failed to load plugin %s with "
             "the following error: %s - %s" %
             (class_name, exc.__class__.__name__, exc.message))
+
+def get_prefix(str_list):
+    min_len=min([len(s) for s in str_list])
+    i=0
+    prefix=[]
+    while i<min_len:
+        chars=[s[i] for s in str_list]
+        if len(set(chars))==1:
+            prefix.extend(set(chars))
+            i+=1
+        else:
+            break
+    return ''.join(prefix)

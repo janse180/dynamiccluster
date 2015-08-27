@@ -53,7 +53,12 @@ class ClusterManager(object):
         assert 0, 'Must define add_node'
     def hold_node(self, node):
         """
-        hold the node from cluster so that it won't accept new jobs, existing jobs keep running
+        hold the node in cluster so that it won't accept new jobs, existing jobs keep running
+        """
+        assert 0, 'Must define hold_node'
+    def unhold_node(self, node):
+        """
+        unhold the node in cluster and put it back to working state
         """
         assert 0, 'Must define hold_node'
     def remove_node(self, node):
@@ -65,7 +70,7 @@ class ClusterManager(object):
         """
         kill all jobs on this node (so it can be removed etc)
         """
-        assert 0, 'Must define remove_node'
+        assert 0, 'Must define vacate_node'
     
 class TorqueManager(ClusterManager):
     def __init__(self, config):
@@ -102,7 +107,9 @@ class TorqueManager(ClusterManager):
                 node_state, s = torque_utils.check_node(the_node, self.config['check_node_command'])
                 the_node.time_in_current_state=s
                 the_node.state_start_time=0
-                if "offline" in node["state"].lower():
+                if "mom-list-not-sent" in node["state"].lower():
+                    the_node.state=WorkerNode.Starting
+                elif "offline" in node["state"].lower():
                     if node_state == "drained":
                         the_node.state=WorkerNode.Held
                     else:
@@ -307,11 +314,19 @@ class TorqueManager(ClusterManager):
     def hold_node(self, wn):
         log.debug("hold node %s in cluster" % wn)
         torque_utils.hold_node_in_torque(wn, self.config['pbsnodes_command'])
+        
+    def unhold_node(self, wn):
+        log.debug("unhold node %s in cluster" % wn)
+        torque_utils.set_node_online(wn, self.config['set_node_command'])
 
-    def vocate_node(self, wn):
+    def vacate_node(self, wn):
         if wn.jobs is None:
             return
-        for jobid in wm.jobs:
+        log.debug("jobs %s" % wn.jobs)
+        for jobid in wn.jobs.split(", "):
+            if "/" in jobid:
+                jobid=jobid.split('/')[1]
+            log.debug("killing job %s" % jobid)
             torque_utils.signal_job(jobid, "9", self.config['signal_job_command'])
             torque_utils.delete_job(jobid, self.config['delete_job_command'])
 
@@ -481,16 +496,28 @@ class SGEManager(ClusterManager):
         
     def hold_node(self, wn):
         log.debug("hold node %s in cluster" % wn)
-        sge_utils.hold_node_in_sge(wn, self.config['qmod_command'])
+        sge_utils.disable_node_in_sge(wn, self.config['qmod_command'])
+
+    def unhold_node(self, wn):
+        log.debug("unhold node %s in cluster" % wn)
+        torque_utils.enable_node_in_sge(wn, self.config['set_node_command'])
 
     def remove_node(self, wn, reservation):
         log.debug("removing node %s from cluster" % wn)
         if wn.jobs:
-            for j in jobs:
-                log.debug("deleting job %s"%j)
-                sge_utils.delete_job(j)
+            return False
+#             for j in jobs:
+#                 log.debug("deleting job %s"%j)
+#                 sge_utils.delete_job(j)
         sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-dattr", reservation['account'])
         time.sleep(.5)
         sge_utils.unset_slots(wn, self.config['unset_slots_command'], reservation['queue'])
         time.sleep(.5)
         return sge_utils.remove_node_from_sge(wn, self.config['remove_node_command'])
+
+    def vacate_node(self, wn):
+        if wn.jobs is None:
+            return
+        for j in jobs:
+            log.debug("deleting job %s"%j)
+            sge_utils.delete_job(j)

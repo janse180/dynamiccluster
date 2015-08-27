@@ -1,5 +1,8 @@
 var frequency = 0;
 var timer ;
+var refresh_count=0;
+var graph_list=[];
+var metrics_url;
 function initWNView(){
 	  $('#wntab').addClass('active');
 	  $('#jtab').removeClass('active');
@@ -119,7 +122,17 @@ function initJobView(){
 		  $.each( data, function( key, val ) {
 			  //alert(val.id);
 			  //console.log(val);
-			  $('#jtable').append('<tr><th>'+val.jobid+'</th><td>'+val.name+'</td><td>'+convertJobState(val.state)+'</td><td>'+val.priority+'</td><td>'+val.owner+'</td><td>'+val.queue+'</td><td>'+val.account+'</td><td>'+val.property+'</td><td>'+val.requested_walltime+'</td><td>'+val.requested_mem+'</td><td>'+convertProc(val)+'</td><td>'+moment.unix(val.creation_time).format("YYYY-M-D h:mm:ss")+'</td><td>A</td></tr>'); 
+			  queue="&nbsp;";
+			  if (val.queue) queue=val.queue;
+			  account="&nbsp;";
+			  if (val.account) account=val.account;
+			  property="&nbsp;";
+			  if (val.property) property=val.property;
+			  requested_walltime="&nbsp;";
+			  if (val.requested_walltime) requested_walltime=val.requested_walltime;
+			  requested_mem="&nbsp;";
+			  if (val.requested_mem) requested_mem=val.requested_mem;
+			  $('#jtable').append('<tr><th><a href=\'javascript:showJob("'+val.jobid+'")\'>'+val.jobid+'</a></th><td>'+val.name+'</td><td>'+convertJobState(val.state)+'</td><td>'+val.priority+'</td><td>'+val.owner+'</td><td>'+queue+'</td><td>'+account+'</td><td>'+property+'</td><td>'+requested_walltime+'</td><td>'+requested_mem+'</td><td>'+convertProc(val)+'</td><td>'+moment.unix(val.creation_time).format("YYYY-M-D h:mm:ss")+'</td></tr>'); 
 		  });
 		});
 }
@@ -132,6 +145,45 @@ function convertJobState(s) {
 
 function convertProc(p) {
 	return p.requested_cores+"cores("+p.cores_per_node+"pn)";
+}
+
+function showJob(jobid) {
+	$.getJSON( "/job/"+jobid, function( data ) {
+		console.log(data);
+		$('#modalLabel').html(jobid);
+		htmlstr='<table style="width: auto;" class="table table-striped">'+
+				'<tr><th>Job ID</th><td>'+data.jobid+'</td></tr>'+
+				'<tr><th>Name</th><td>'+data.name+'</td></tr>'+
+				'<tr><th>Priority</th><td>'+data.priority+'</td></tr>'+
+				'<tr><th>State</th><td>'+convertJobState(data.state)+'</td></tr>'+
+				'<tr><th>Owner</th><td>'+data.owner+'</td></tr>';
+		if (data.queue) {
+			htmlstr+='<tr><th>Queue</th><td>'+data.queue+'</td></tr>';
+		}
+		if (data.account) {
+			htmlstr+='<tr><th>Account</th><td>'+data.account+'</td></tr>';
+		}
+		if (data.property) {
+			htmlstr+='<tr><th>Property</th><td>'+data.property+'</td></tr>';
+		}
+		if (data.requested_walltime) {
+			htmlstr+='<tr><th>Requested Walltime</th><td>'+data.requested_walltime+'</td></tr>';
+		}
+		if (data.requested_mem) {
+			htmlstr+='<tr><th>Requested Memory</th><td>'+data.requested_mem+'</td></tr>';
+		}
+		htmlstr+='<tr><th>Requested Processors</th><td>'+convertProc(data)+'</td></tr>';
+		htmlstr+='<tr><th>Creation Time</th><td>'+moment.unix(data.creation_time).format("YYYY-M-D h:mm:ss")+'</td></tr>';
+		htmlstr+='<tr><th>Extra Attributes</th><td>&nbsp;</td></tr>';
+		if (data.extra_attributes) {
+			$.each(data.extra_attributes, function( key, val ) {
+				htmlstr+='<tr><th>'+key+'</th><td>'+val.replace(/,/g,", ")+'</td></tr>';
+			});
+		}
+		htmlstr+='</table>';
+		$('#modalMain').html(htmlstr);
+		$('#infoDialog').modal('show');
+	});
 }
 
 function initResourceView() {
@@ -150,15 +202,15 @@ function initResourceView() {
 			  //alert(val.id);
 			  console.log(val);
 			  htmlstr+='<div class="panel panel-default" id="panel'+val.name+'"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-target="#collapse'+val.name+'" href="#collapse'+val.name+'">'+val.name+'</a></h4></div><div id="collapse'+val.name+'" class="panel-collapse collapse in"><div class="panel-body">';
-			  htmlstr+='<div style="padding: 3px; float: left; width: 75%; text-align: left;"><h5><span class="label label-primary">Type</span>'+val.type+' <span class="label label-primary">Min</span> '+val.min_num+' <span class="label label-primary">Current</span> '+val.current_num+' <span class="label label-primary">Max</span> '+val.max_num+'&nbsp;&nbsp;';
+			  htmlstr+='<div style="padding: 3px; float: left; width: 75%; text-align: left;"><h5><span class="label label-primary">Type</span>'+val.type+' <span class="label label-primary">Priority</span>'+val.priority+' <span class="label label-primary">Min</span> '+val.min_num+' <span class="label label-primary">Current</span> '+val.current_num+' <span class="label label-primary">Max</span> '+val.max_num+'&nbsp;&nbsp;';
 			  if (val.reservation_queue) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Queue</span>&nbsp;'+val.reservation_queue+'&nbsp;&nbsp;';
 			  if (val.reservation_property) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Property</span>&nbsp;'+val.reservation_property+'&nbsp;&nbsp;';
 			  if (val.reservation_account) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Account</span>&nbsp;'+val.reservation_account+'&nbsp;&nbsp;';
 			  htmlstr+='<button type="button" class="btn btn-success btn-sm" id="addbutton'+val.name+'" data-toggle="modal" data-target="#addResDialog" data-whatever="'+val.name+'">Add</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="removebutton'+val.name+'" data-toggle="modal" data-target="#removeResDialog" data-whatever="'+val.name+'">Remove</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="holdbutton'+val.name+'" data-toggle="modal" data-target="#holdResDialog" data-whatever="'+val.name+'">Hold</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="unholdbutton'+val.name+'" data-toggle="modal" data-target="#holdResDialog" data-whatever="'+val.name+'">Unhold</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="vocatebutton'+val.name+'" data-toggle="modal" data-target="#holdResDialog" data-whatever="'+val.name+'">Vocate</button></h5></div>';
+			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="removebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="remove" data-whatever="'+val.name+'">Remove</button>&nbsp;';
+			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="holdbutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="hold" data-whatever="'+val.name+'">Hold</button>&nbsp;';
+			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="unholdbutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="unhold" data-whatever="'+val.name+'">Unhold</button>&nbsp;';
+			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="vacatebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="vacate" data-whatever="'+val.name+'">Vacate</button></h5></div>';
 			  percentage=parseInt(val.current_num*100/val.max_num);
 			  htmlstr+='<div class="progress"><div class="progress-bar" role="progressbar" aria-valuenow="'+percentage+'" aria-valuemin="0" aria-valuemax="100" style="width: '+percentage+'%;">'+percentage+'%</div></div></div>';
 			  htmlstr+='<table class="table table-striped table-condensed" id="table'+val.name+'"><thead><tr><th>&nbsp;</th><th>Hostname</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>Jobs</th></tr></thead><tbody>';
@@ -201,14 +253,15 @@ function addResource(res_name, num){
         },
 	    error: function(jqXHR, textStatus, errorThrown) {
 	        console.log(jqXHR.status);
-	        if (jqXHR.status==404) {
-	        	addAlert("danger", "Resource "+res_name+" not found.");
-	        } else if (jqXHR.status==400) {
-	        	addAlert("danger", "You have requested "+num+" worker node(s) in "+res_name+" but it has exceeded the resource limit.");
-		    	//$("#failalert").show();
-	        } else if (jqXHR.status==500) {
-	        	addAlert("danger", "Server error");
-	        }
+	        addAlert("danger", jqXHR.responseText);
+//	        if (jqXHR.status==404) {
+//	        	addAlert("danger", "Resource "+res_name+" not found.");
+//	        } else if (jqXHR.status==400) {
+//	        	addAlert("danger", "You have requested "+num+" worker node(s) in "+res_name+" but it has exceeded the resource limit.");
+//		    	//$("#failalert").show();
+//	        } else if (jqXHR.status==500) {
+//	        	addAlert("danger", "Server error");
+//	        }
 	        initResourceView();
 	        //console.log(textStatus);
 	        //console.log(errorThrown);
@@ -217,25 +270,40 @@ function addResource(res_name, num){
 	
 }
 
-function removeResource(wn){
-	console.log(wn);
+function modifyResource(wn, action){
+	console.log(action+" "+wn);
+	req_type="PUT";
+	if (action=="remove") req_type="DELETE";
+	req_url="/workernode/"+wn;
+	if (action!="remove") req_url+="/"+action;
 	$.ajax({
-        type: "DELETE",
-        url: "/workernode/"+wn,
+        type: req_type,
+        url: req_url,
         success: function(response) {
 		    console.log(response);
 		    if (response["success"]==true){
-		    	addAlert("success", "Successfully sent a request to delete worker node "+wn+".");
-		    	initResourceView();
+		    	addAlert("success", "Successfully sent a request to "+action+" worker node "+wn+".");
 		    }else
 		    	addAlert("danger", "Server error");
+	    	refresh_count-=1;
+	    	if (refresh_count<=0) {
+	    		console.log("refresh resource view");
+	    		initResourceView();
+	    	}
 	    },
 	    error: function(jqXHR, textStatus, errorThrown) {
-	        console.log(jqXHR);
-	        console.log(jqXHR.status);
-	        console.log(textStatus);
-	        console.log(errorThrown);
+	        //console.log(jqXHR);
+	        //console.log(jqXHR.status);
+	        //console.log(textStatus);
+	        //console.log(errorThrown);
 	        addAlert("danger", jqXHR.responseText);
+	    },
+	    always: function(jqXHR) {
+	    	refresh_count-=1;
+	    	if (refresh_count<=0) {
+	    		console.log("refresh resource view");
+	    		initResourceView();
+	    	}
 	    }
 	});
 	
@@ -266,40 +334,43 @@ $('#addResDialog').find('.modal-body button').click(function() {
     	inputbox.tooltip('show');
     }
 });
-$('#removeResDialog').on('show.bs.modal', function (event) {
+$('#modifyResDialog').on('show.bs.modal', function (event) {
 	var selected = [];
 	var button = $(event.relatedTarget); // Button that triggered the modal
 	var res_name = button.data('whatever');
-	//console.log(res_name);
-	$("#removeList").empty();
+	var action = button.data('action');
+	console.log(action);
 	$('#table'+res_name+' input:checked').each(function() {
 	    selected.push($(this).val());
-	    $("#removeList").append('<li>'+$(this).val()+'</li>');
 	});
-	//console.log(inputbox);
 	if (selected.length==0) {
-		$("#removeResModalMain").html("Please select worker nodes to delete.");
-		$('#removeResDialog').find('.modal-footer .btn-primary').prop('disabled', true);
+		$("#modifyResModalMain").html("Please select worker nodes.");
+		$('#modifyResDialog').find('.modal-footer .btn-primary').prop('disabled', true);
 	} else {
-		htmlStr="Do you really want to remove the following worker nodes?<ul id='removeList'>";
+		$("#modifyResModalLabel").html("Selected Worker Nodes:");
+		htmlStr="Do you really want to "+action+" the following worker nodes?<ul id='nodesList'>";
 		$.each( selected, function( key, val ) {
 			htmlStr+='<li>'+val+'</li>';
 		});
 		htmlStr+="</ul>";
-		$("#removeResModalMain").html(htmlStr);
-		$('#removeResDialog').find('.modal-footer .btn-primary').prop('disabled', false);
+		refresh_count=selected.length;
+		$("#modifyResModalMain").html(htmlStr);
+		$('#modifyResDialog').find('.modal-footer .btn-primary').prop('disabled', false);
+		$('#modifyResDialog').find('.modal-footer input:hidden').val(action);
 	}
-    console.log(selected);
     //console.log($.isNumeric(n));
 });
 
-$('#removeResDialog').find('.modal-footer .btn-primary').click(function() {
-	$('#removeList').each(function() {
+$('#modifyResDialog').find('.modal-footer .btn-primary').click(function() {
+	var action=$('#modifyResDialog').find('.modal-footer input:hidden').val();
+	console.log("button action:"+action);
+	$('#nodesList').each(function() {
 		$(this).find('li').each(function(){
-			removeResource($(this).text());
+			modifyResource($(this).text(), action);
+			//removeResource($(this).text());
 		});
 	});
-	$('#removeResDialog').modal('hide');
+	$('#modifyResDialog').modal('hide');
 });
 
 function initGraphView() {
@@ -308,6 +379,171 @@ function initGraphView() {
 	  $('#gtab').addClass('active');
 	  $('#stab').removeClass('active');
 	  $('#rtab').removeClass('active');
+	  console.log("graph view:"+graph_view);
+	  if (graph_view){
+		  prefix=graphite_prefix;
+		  hostname=graphite_hostname;
+		  if (hostname=="localhost") hostname=window.location.hostname;
+		  $.fn.graphite.defaults.url = "http://"+hostname+":8080/render";
+		  metrics_url="http://"+hostname+":8080/metrics/find";
+		  $("#main").html('<div class="row"><div class="row"><div class="col-md-8">&nbsp;</div>'+
+				  '<div class="col-md-4">From <input type=text id=from value="-3h"> To <input type=text id=to value="Now"> <button type="button" class="btn btn-info" id="go" rel="popover">Go</button></div></div>'+
+				  '<div class="row"><div class="col-md-2"><div class="sidebar-nav"><div class="navbar navbar-default" role="navigation">'+
+				  '<div class="navbar-collapse collapse sidebar-navbar-collapse"><ul class="nav navbar-nav" id="graphmenu">'+
+		          '<li id="dtgraphtab" class="active"><a href="javascript:showDTGraph()">Dynamic Cluster</a></li>'+
+		          '<li id="wngraphtab"><a href="javascript:showWNOverview()">Worker Nodes</a></li><li class="divider"></li>'+
+		          '</ul></div></div></div></div><div class="col-md-8" id="graphmain">'+
+				  '</div><div class="col-md-2">&nbsp;</div>'+
+				  '</div>');
+		  showDTGraph();
+		  $.getJSON( metrics_url+"?query="+wn_prefix+"*", function( data ) {
+			  var items = [];
+			  //alert(data);
+			  $.each( data, function( key, val ) {
+				  //alert(val.id);
+				  items.push(val.id);
+			  });
+			 
+			  items.forEach(function(id){
+				  //alert( p);
+				  $("#graphmenu").append("<li id='"+id+"tab'><a href='javascript:showWNGraph(\""+id+"\")'>&nbsp;&nbsp;"+id+"</a></li>");
+			  });
+			});
+		  $('#go').click(function(){
+				//alert($("#from").val()+$("#to").val());
+				var opts={from: $("#from").val()};
+				if ($("#to").val().toLowerCase()!="now") opts['until']=$("#to").val();
+				//alert(opts.from+" "+opts.until);
+				for (var i=0;i<graph_list.length;i++){
+					//alert(graphs[i]);
+					$.fn.graphite.update($(graph_list[i]), opts);
+				}
+//				$.fn.graphite.update($("#nodeview"), opts);
+//				$.fn.graphite.update($("#coreview"), opts);
+//				$.fn.graphite.update($("#resnodeview"), opts);
+//				$.fn.graphite.update($("#rescoreview"), opts);
+			});
+	  }else{
+		  $("#main").html('<div class="well well-lg">You need to define graphite plugin to enable graph view.</div>');
+	  }
+}
+
+function showDTGraph() {
+	$('#graphmenu').find('li').each(function(){
+		$(this).removeClass('active');
+	});
+	$('#dtgraphtab').addClass('active');
+	$("#graphmain").html('<div class="row"><div class="col-md-6"><img id="nodeview" class="center-block"/></div><div class="col-md-6"><img id="coreview" class="center-block"/></div></div>'+
+			  '<div class="row"><div class="col-md-6"><img id="resnodeview" class="center-block"/></div><div class="col-md-6"><img id="rescoreview" class="center-block"/></div></div>');
+	  $("#nodeview").graphite({
+		    from: $("#from").val(),
+		    to: $("#to").val(),
+		    colorList: "black,grey,red,brown,green,darkgreen,yellow",
+		    target: [
+		        "alias("+prefix+".nodes.total,'Total')",
+		        "alias(stacked("+prefix+".nodes.deleting),'Deleting')",
+		        "alias(stacked("+prefix+".nodes.error),'Error')",
+		        "alias(stacked("+prefix+".nodes.vacating),'Vacating')",
+		        "alias(stacked("+prefix+".nodes.busy),'Busy')",
+		        "alias(stacked("+prefix+".nodes.idle),'Idle')",
+		        "alias(stacked("+prefix+".nodes.starting),'Starting')"
+		    ],
+		    lineWidth: "2",
+		    width: "600",
+		    height: "400",
+		    title: "Number of Worker Nodes"
+	  });
+	  $("#coreview").graphite({
+		    from: $("#from").val(),
+		    to: $("#to").val(),
+		    colorList: "black,grey,red,brown,green,darkgreen,yellow",
+		    target: [
+		        "alias("+prefix+".cores.total,'Total')",
+		        "alias(stacked("+prefix+".cores.deleting),'Deleting')",
+		        "alias(stacked("+prefix+".cores.error),'Error')",
+		        "alias(stacked("+prefix+".cores.vacating),'Vacating')",
+		        "alias(stacked("+prefix+".cores.busy),'Busy')",
+		        "alias(stacked("+prefix+".cores.idle),'Idle')",
+		        "alias(stacked("+prefix+".cores.starting),'Starting')"
+		    ],
+		    lineWidth: "2",
+		    width: "600",
+		    height: "400",
+		    title: "Number of Cores"
+	  });
+	  $("#resnodeview").graphite({
+		    from: $("#from").val(),
+		    colorList: "red,orange,green,blue,yellow,brown,purple",
+		    target: [
+		        "aliasByNode(stacked("+prefix+".resource.*.nodes),3)"
+		    ],
+		    yMin: "0",
+		    lineWidth: "2",
+		    width: "600",
+		    height: "400",
+		    title: "Number of Worker Nodes by Resource"
+	  });
+	  $("#rescoreview").graphite({
+		    from: $("#from").val(),
+		    colorList: "red,orange,green,blue,yellow,brown,purple",
+		    target: [
+		        "aliasByNode(stacked("+prefix+".resource.*.cores),3)"
+		    ],
+		    yMin: "0",
+		    lineWidth: "2",
+		    width: "600",
+		    height: "400",
+		    title: "Number of Cores by Resource"
+	  });
+	  graph_list=["#nodeview","#coreview","#resnodeview","#rescoreview"];
+}
+
+function showWNOverview() {
+	$('#graphmenu').find('li').each(function(){
+		$(this).removeClass('active');
+	});
+	$('#wngraphtab').addClass('active');
+}
+
+function showWNGraph(id) {
+	$('#graphmenu').find('li').each(function(){
+		$(this).removeClass('active');
+	});
+	$('#'+id+'tab').addClass('active');
+	$("#graphmain").html('<div class="row"><div class="col-md-4"><img id="load1view" class="center-block"/></div>'+
+			'<div class="col-md-4"><img id="load5view" class="center-block"/></div>'+
+			'<div class="col-md-4"><img id="load15view" class="center-block"/></div></div>');
+	$("#load1view").graphite({
+	  from: $("#from").val(),
+	  to: $("#to").val(),
+	  target: [
+             "alias("+id+".load.1min,'"+id+" Load 1m')"
+	  ],
+	  lineWidth: "1",
+	  width: "400",
+	  height: "300",
+	});
+	$("#load5view").graphite({
+		  from: $("#from").val(),
+		  to: $("#to").val(),
+		  target: [
+	             "alias("+id+".load.5min,'"+id+" Load 5m')"
+		  ],
+		  lineWidth: "1",
+		  width: "400",
+		  height: "300",
+		});
+	$("#load15view").graphite({
+		  from: $("#from").val(),
+		  to: $("#to").val(),
+		  target: [
+	             "alias("+id+".load.15min,'"+id+" Load 15m')"
+		  ],
+		  lineWidth: "1",
+		  width: "400",
+		  height: "300",
+		});
+	  graph_list=["#load1view","#load5view","#load15view"];
 }
 
 function initSettingView() {

@@ -73,7 +73,7 @@ def update_hostgroup(wn, hostgroup_command, option, group_name):
         log.exception("Problem running %s, unexpected error" % cmd)
         return False
 
-def hold_node_in_sge(wn, qmod_command):
+def disable_node_in_sge(wn, qmod_command):
     log.debug("disabling all queues in node %s" % (wn.hostname))
     cmd=qmod_command.format("-d", wn.hostname)
     try:
@@ -84,6 +84,24 @@ def hold_node_in_sge(wn, qmod_command):
         returncode = sp.returncode
         if returncode != 0:
             log.error("Error when disabling node %s in sge, returncode %s"% (wn.hostname, returncode))
+            log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
+            return False
+        return True
+    except:
+        log.exception("Problem running %s, unexpected error" % cmd)
+        return False
+
+def enable_node_in_sge(wn, qmod_command):
+    log.debug("enabling all queues in node %s" % (wn.hostname))
+    cmd=qmod_command.format("-e", wn.hostname)
+    try:
+        hold_node = shlex.split(cmd)
+        sp = subprocess.Popen(hold_node, shell=False,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+        if returncode != 0:
+            log.error("Error when enabling node %s in sge, returncode %s"% (wn.hostname, returncode))
             log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
             return False
         return True
