@@ -386,29 +386,32 @@ function initGraphView() {
 		  if (hostname=="localhost") hostname=window.location.hostname;
 		  $.fn.graphite.defaults.url = "http://"+hostname+":8080/render";
 		  metrics_url="http://"+hostname+":8080/metrics/find";
-		  $("#main").html('<div class="row"><div class="row"><div class="col-md-8">&nbsp;</div>'+
+		  htmlStr='<div class="row"><div class="row"><div class="col-md-8">&nbsp;</div>'+
 				  '<div class="col-md-4">From <input type=text id=from value="-3h"> To <input type=text id=to value="Now"> <button type="button" class="btn btn-info" id="go" rel="popover">Go</button></div></div>'+
 				  '<div class="row"><div class="col-md-2"><div class="sidebar-nav"><div class="navbar navbar-default" role="navigation">'+
 				  '<div class="navbar-collapse collapse sidebar-navbar-collapse"><ul class="nav navbar-nav" id="graphmenu">'+
-		          '<li id="dtgraphtab" class="active"><a href="javascript:showDTGraph()">Dynamic Cluster</a></li>'+
-		          '<li id="wngraphtab"><a href="javascript:showWNOverview()">Worker Nodes</a></li><li class="divider"></li>'+
-		          '</ul></div></div></div></div><div class="col-md-8" id="graphmain">'+
-				  '</div><div class="col-md-2">&nbsp;</div>'+
-				  '</div>');
+		          '<li id="dtgraphtab" class="active"><a href="javascript:showDTGraph()">Dynamic Cluster</a></li>';
+		  if (wn_prefix!='') 
+			  htmlStr+='<li id="wngraphtab"><a href="javascript:showWNOverview()">Worker Nodes</a></li><li class="divider"></li>';
+		  htmlStr+='</ul></div></div></div></div><div class="col-md-10" id="graphmain">'+
+				  '</div></div>';
+		  $("#main").html(htmlStr);
 		  showDTGraph();
-		  $.getJSON( metrics_url+"?query="+wn_prefix+"*", function( data ) {
-			  var items = [];
-			  //alert(data);
-			  $.each( data, function( key, val ) {
-				  //alert(val.id);
-				  items.push(val.id);
-			  });
-			 
-			  items.forEach(function(id){
-				  //alert( p);
-				  $("#graphmenu").append("<li id='"+id+"tab'><a href='javascript:showWNGraph(\""+id+"\")'>&nbsp;&nbsp;"+id+"</a></li>");
-			  });
-			});
+		  if (wn_prefix!='') {
+			  $.getJSON( metrics_url+"?query="+wn_prefix+"*", function( data ) {
+				  var items = [];
+				  //alert(data);
+				  $.each( data, function( key, val ) {
+					  //alert(val.id);
+					  items.push(val.id);
+				  });
+				 
+				  items.forEach(function(id){
+					  //alert( p);
+					  $("#graphmenu").append("<li id='"+id+"tab'><a href='javascript:showWNGraph(\""+id+"\")'>&nbsp;&nbsp;"+id+"</a></li>");
+				  });
+				});
+		  }
 		  $('#go').click(function(){
 				//alert($("#from").val()+$("#to").val());
 				var opts={from: $("#from").val()};
@@ -503,6 +506,18 @@ function showWNOverview() {
 		$(this).removeClass('active');
 	});
 	$('#wngraphtab').addClass('active');
+	$("#graphmain").html('<div class="row"><div class="col-md-6"><img id="load1view" class="center-block"/></div>'+
+			'<div class="col-md-6"><img id="load15view" class="center-block"/></div></div>');
+	  $("#load1view").graphite({
+		  from: $("#from").val(),
+		  to: $("#to").val(),
+	    target: ["aliasByNode(stacked("+wn_prefix+"*.load.1min),0)"],
+	    hideLegend: "false",
+	    lineWidth: "1",
+	    width: "600",
+	    height: "400",
+	    title: "Worker Nodes Overview"
+	  });
 }
 
 function showWNGraph(id) {

@@ -31,6 +31,11 @@ class ClusterManager(object):
         update existing worker nodes' status
         """
         assert 0, 'Must define update_worker_nodes'
+    def check_reservation(self, node, reservation):
+        """
+        check reservation in startup, if not reserved properly, fix it
+        """
+        assert 0, 'Must define check_reservation'
     def query_jobs(self):
         """
         get a list of queued jobs
@@ -129,6 +134,8 @@ class TorqueManager(ClusterManager):
                                              "ntype": node["ntype"]}
                 if "gpus" in node:
                     the_node.extra_attributes["gpus"]=node["gpus"]
+                if "properties" in node:
+                    the_node.extra_attributes["properties"]=node["properties"]
                 if "status" in node:
                     the_node.extra_attributes["status"]=node["status"]
             if len(nodes)>0:
@@ -249,6 +256,31 @@ class TorqueManager(ClusterManager):
             worker_node.state=WorkerNode.Deleting
             worker_node.state_start_time=time.time()
             
+    def check_reservation(self, wn, reservation):
+        current_res=torque_utils.show_res_of_node(wn, self.config['showres_command'])
+        if "queue" in reservation and reservation['queue'] is not None:
+            need_fix=True
+            if current_res is not None:
+                res_line=[l for l in current_res.split('\n') if reservation['queue']+'.' in l]
+                if len(res_line)>0:
+                    need_fix=False
+            if need_fix:
+                log.debug("node %s is not reserved for queue %s, fix it now"%(wn.hostname,reservation['queue'] ))
+                torque_utils.set_res_for_node(wn, "queue", reservation['queue'], self.config['setres_command'])
+        if "account" in reservation and reservation['account'] is not None:
+            need_fix=True
+            if current_res is not None:
+                res_line=[l for l in current_res.split('\n') if reservation['account']+'.' in l]
+                if len(res_line)>0:
+                    need_fix=False
+            if need_fix:
+                log.debug("node %s is not reserved for account %s, fix it now"%(wn.hostname,reservation['account'] ))
+                torque_utils.set_res_for_node(wn, "account", reservation['account'], self.config['setres_command'])
+        if "property" in reservation and reservation['property'] is not None:
+            if 'properties' not in wn.extra_attributes or reservation['property'] not in wn.extra_attributes['properties']:
+                log.debug("node %s is not reserved for property %s, fix it now"%(wn.hostname,reservation['property'] ))
+                torque_utils.set_node_property(wn, reservation['property'], self.config['set_node_command'])
+        
     def add_node(self, wn, reservation):
         log.debug("adding node %s to cluster with reservation %s" % (wn, reservation))
         retry=5
@@ -261,11 +293,13 @@ class TorqueManager(ClusterManager):
         if not ret:
             log.error("cannot add %s to torque, delete it" % vm.hostname)
             return False
+        torque_utils.set_np(wn, self.config['set_node_command'])
+        #time.sleep(2)
         #check if the new VM is added to torque
         retry=60
         while retry>0:
             node_state, s = torque_utils.check_node(wn, self.config['check_node_command'])
-            if node_state is not None:
+            if node_state is not None and node_state!='gone':
                 break
             retry-=1
             log.debug("vm %s is not showing in maui yet" % wn.hostname)
@@ -274,13 +308,25 @@ class TorqueManager(ClusterManager):
             log.error("cannot see %s in maui, delete it" % wn.hostname)
             torque_utils.remove_node_from_torque(wn, self.config['remove_node_command'])
             return False
-        torque_utils.set_np(wn, self.config['set_node_command'])
-        time.sleep(2)
         # set account string to wn
         if "queue" in reservation and reservation['queue'] is not None:
-            torque_utils.set_res_for_node(wn, "queue", reservation['queue'], self.config['setres_command'])
+            retry=5
+            while retry>0:
+                if torque_utils.set_res_for_node(wn, "queue", reservation['queue'], self.config['setres_command'])==True:
+                    break
+                retry-=1
+            if retry==0:
+                log.error("cannot set reservation for %s, delete it"% wn.hostname)
+                return False
         if "account" in reservation and reservation['account'] is not None:
-            torque_utils.set_res_for_node(wn, "account", reservation['account'], self.config['setres_command'])
+            retry=5
+            while retry>0:
+                if torque_utils.set_res_for_node(wn, "account", reservation['account'], self.config['setres_command'])==True:
+                    break
+                retry-=1
+            if retry==0:
+                log.error("cannot set reservation for %s, delete it"% wn.hostname)
+                return False
         if "property" in reservation and reservation['property'] is not None:
             torque_utils.set_node_property(wn, reservation['property'], self.config['set_node_command'])
             time.sleep(2)
@@ -488,6 +534,9 @@ class SGEManager(ClusterManager):
         log.info("workernode %s is ready now."%worker_node.hostname)
         worker_node.state=WorkerNode.Idle
         worker_node.state_start_time=time.time()
+    
+    def check_reservation(self, wn, reservation):
+        return
     
     def add_node(self, wn, reservation):
         if sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-aattr", reservation['account']):

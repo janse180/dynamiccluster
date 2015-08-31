@@ -76,6 +76,9 @@ cluster:
     # the command to get jobs' priorities
     diagnose_p_command: /usr/bin/diagnose -p
     
+    # the command to show reservations of a node
+    showres_command: /usr/bin/showres -n | grep {0}
+
     # the command to set account_string to a node
     setres_command: /usr/bin/setres {0} {1} {2}
     

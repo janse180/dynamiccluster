@@ -121,7 +121,7 @@ class DynamicClusterLoader(object):
 		if verbose>0:
 			log.setLevel(get_log_level(verbose))
 
-		dynamic_cluster_server = DynamicServer(config, self.__conf["pidfile"], os.getcwd())
+		dynamic_cluster_server = DynamicServer(config, self.__conf["pidfile"], os.path.dirname(os.path.realpath(__file__)))
 		try:
 			dynamic_cluster_server.init()
 		except NoClusterDefinedException:

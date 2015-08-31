@@ -169,6 +169,7 @@ class DynamicEngine(threading.Thread):
                         log.debug("instance %s is a worker node in cluster"%instance.dns_name)
                         workernodes[0].instance=instance
                         workernodes[0].type=self.config['cloud'][instance.cloud_resource]['type']
+                        self.__cluster.check_reservation(workernodes[0], self.config['cloud'][workernodes[0].instance.cloud_resource]['reservation'])
                         if workernodes[0].state==WorkerNode.Idle or workernodes[0].state==WorkerNode.Busy:
                             workernodes[0].instance.state=Instance.Ready
                     else:
