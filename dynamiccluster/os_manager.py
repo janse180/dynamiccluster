@@ -4,7 +4,7 @@ from dynamiccluster.exceptions import CloudNotAvailableException, FlavorNotFound
 from dynamiccluster.cloud_manager import CloudManager
 import time
 import datetime
-from novaclient.v1_1 import client
+from novaclient import client
 from novaclient.exceptions import NotFound
 import os
 
@@ -20,8 +20,7 @@ class OpenStackManager(CloudManager):
         attempt_time=0
         while not connected:
             try:
-                conn=client.Client(self.config['username'], self.config['password'], self.config['project'], self.config['auth_url'])
-                conn.authenticate()
+                conn=client.Client(2, self.config['username'], self.config['password'], self.config['project'], self.config['auth_url'])
                 connected=True
             except:
                 log.exception("Encounter an error when connecting to OpenStack.")
