@@ -12,6 +12,17 @@ def getLogger(name):
         name = "dynamiccluster.%s" % name.rpartition(".")[-1]
     return logging.getLogger(name)
 
+def get_log_level(verbose):
+    if verbose <= 0:
+        return logging.ERROR
+    elif verbose == 1:
+        return logging.WARNING
+    elif verbose == 2:
+        return logging.INFO
+    elif verbose == 3:
+        return logging.DEBUG
+    return logging.NOTICE
+
 def excepthook(exctype, value, traceback):
     """Except hook used to log unhandled exceptions to log
     """
@@ -68,3 +79,41 @@ def get_aws_vcpu_num_by_instance_type(type):
     elif type.endswith(".8xlarge"):
         return 32
     return 1
+
+def init_object(class_name, **kwargs):
+    mod_name = '.'.join(class_name.split('.')[:-1])
+    class_name = class_name.split('.')[-1]
+    try:
+        mod = __import__(mod_name, globals(), locals(), [class_name])
+    except SyntaxError, e:
+        raise PluginInitialisationError(
+            "Plugin %s (%s) contains a syntax error at line %s" %
+            (class_name, e.filename, e.lineno))
+    except ImportError, e:
+        raise PluginInitialisationError(
+            "Failed to import plugin %s: %s" %
+            (plugin_name, e[0]))
+    klass = getattr(mod, class_name, None)
+    if not klass:
+        raise PluginInitialisationError(
+            'Plugin class %s does not exist' % class_name)
+    try:
+        return klass(**kwargs)
+    except Exception as exc:
+        raise PluginInitialisationError(
+            "Failed to load plugin %s with "
+            "the following error: %s - %s" %
+            (class_name, exc.__class__.__name__, exc.message))
+
+def get_prefix(str_list):
+    min_len=min([len(s) for s in str_list])
+    i=0
+    prefix=[]
+    while i<min_len:
+        chars=[s[i] for s in str_list]
+        if len(set(chars))==1:
+            prefix.extend(set(chars))
+            i+=1
+        else:
+            break
+    return ''.join(prefix)

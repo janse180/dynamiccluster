@@ -4,7 +4,7 @@ from dynamiccluster.exceptions import CloudNotAvailableException, FlavorNotFound
 from dynamiccluster.cloud_manager import CloudManager
 import time
 import datetime
-from novaclient.v1_1 import client
+from novaclient import client
 from novaclient.exceptions import NotFound
 import os
 
@@ -20,8 +20,7 @@ class OpenStackManager(CloudManager):
         attempt_time=0
         while not connected:
             try:
-                conn=client.Client(self.config['username'], self.config['password'], self.config['project'], self.config['auth_url'])
-                conn.authenticate()
+                conn=client.Client(2, self.config['username'], self.config['password'], self.config['project'], self.config['auth_url'])
                 connected=True
             except:
                 log.exception("Encounter an error when connecting to OpenStack.")
@@ -91,8 +90,8 @@ class OpenStackManager(CloudManager):
         if instance.state==Instance.Active:
             try:
                 ip=server.addresses.values()[0][0]['addr']
-                if instance.public_dns_name==None:
-                    instance.public_dns_name=hostname_lookup(ip)
+                if instance.dns_name==None:
+                    instance.dns_name=hostname_lookup(ip)
             except:
                 log.exception("Unable to get IP for instance %s"%instance.uuid)
                 instance.state=Instance.Starting
@@ -124,7 +123,7 @@ class OpenStackManager(CloudManager):
                         log.notice("ip2 %s"%server.addresses.values()[0])
                         log.notice("ip3 %s"%server.addresses.values()[0][0])
                         instance.ip=server.addresses.values()[0][0]['addr']
-                        instance.public_dns_name=hostname_lookup(instance.ip)
+                        instance.dns_name=hostname_lookup(instance.ip)
                     except:
                         log.exception("Unable to get IP for instance %s"%instance)
                     instance.availability_zone=getattr(server,"OS-EXT-AZ:availability_zone")

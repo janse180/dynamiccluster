@@ -1,0 +1,1 @@
+get_starting_instance_names_cmd: "/opt/dynamictorque/admin.py -a"

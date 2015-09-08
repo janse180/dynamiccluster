@@ -28,6 +28,28 @@
 	.panel-heading a.collapsed:after {
 	    content: "\e080";
 	}	
+
+/* make sidebar nav vertical */ 
+@media (min-width: 768px) {
+  .sidebar-nav .navbar .navbar-collapse {
+    padding: 0;
+    max-height: none;
+  }
+  .sidebar-nav .navbar ul {
+    float: none;
+  }
+  .sidebar-nav .navbar ul:not {
+    display: block;
+  }
+  .sidebar-nav .navbar li {
+    float: none;
+    display: block;
+  }
+  .sidebar-nav .navbar li a {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
 	</style>
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -52,22 +74,17 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
-            <li id="wntab" class="active"><a href="javascript:initWNView()">Worker Nodes</a></li>
-            <li id="jtab"><a href="javascript:initJobView()">Jobs</a></li>
-            <li id="rtab"><a href="javascript:initResourceView()">Resources</a></li>
+            <li id="wntab" class="active"><a href="javascript:initWNView()"><span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>&nbsp;Worker Nodes</a></li>
+            <li id="jtab"><a href="javascript:initJobView()"><span class="glyphicon glyphicon-tasks" aria-hidden="true"></span>&nbsp;Jobs</a></li>
+            <li id="rtab"><a href="javascript:initResourceView()"><span class="glyphicon glyphicon-cloud" aria-hidden="true"></span>&nbsp;Resources</a></li>
+            <li id="gtab"><a href="javascript:initGraphView()"><span class="glyphicon glyphicon-stats" aria-hidden="true"></span>&nbsp;Graphs</a></li>
+            <li id="stab"><a href="javascript:initSettingView()"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span>&nbsp;Setting</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
     </nav>
-	<div class="alert alert-success alert-dismissible" role="alert" style="display:none;" id="successalert">
-	  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	  <strong>Success!</strong> A request has been sent.
-	</div>
-	<div class="alert alert-error alert-dismissible" role="alert" style="display:none;" id="failalert">
-	  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	  <strong>Failed!</strong> Unable to send a request, please try again.
-	</div>
-    <div class="container" style="width: 1350px">
+    <div id="alertMessages"></div>
+    <div class="container-fluid">
       <!-- Main component for a primary marketing message or call to action 
       <p>&nbsp;</p>
       <p>&nbsp;</p>
@@ -98,7 +115,7 @@
       <div id="main" width="100%"></div>
 	<!-- Modal -->
 	<div id="infoDialog" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	  <div class="modal-dialog">
+	  <div class="modal-dialog modal-lg">
 	    <div class="modal-content">
 	      <div class="modal-header">
 	        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -137,6 +154,25 @@
 	    </div>
 	  </div>
   	</div>
+	<div id="modifyResDialog" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modifyResModal" aria-hidden="true">
+	  <div class="modal-dialog">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+	        <h4 class="modal-title" id="modifyResModalLabel">Selected Worker Nodes:</h4>
+	      </div>
+	      <div class="modal-body" id="modifyResModalMain">
+	          Do you really want to remove the following worker nodes?
+	          	<ul id="removeList"></ul>
+	      </div>
+	      <div class="modal-footer">
+	        <input type="hidden" id="dialogAction">
+	        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+	        <button type="button" class="btn btn-primary">Yes</button>
+	      </div>
+	    </div>
+	  </div>
+  	</div>
 <!--
       <p>&nbsp;</p>
       <img id="dt" align="middle"/>
@@ -160,6 +196,7 @@
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug 
     <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
     -->
+    <script src="js/config.js"></script> 
     <script src="js/dynamiccluster.js"></script>
   </body>
 </html>

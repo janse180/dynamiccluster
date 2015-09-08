@@ -1,0 +1,192 @@
+#!/bin/bash
+#
+# chkconfig: - 92 08
+# processname: dynamiccluster
+# config: /etc/dynamiccluster/dynamiccluster.yaml
+# pidfile: /var/run/dynamiccluster/dynamiccluster.pid
+# description: Dynamic Cluster is a daemon that starts and stops instances in the cloud for a job scheduler
+#
+### BEGIN INIT INFO
+# Provides: dynamiccluster
+# Required-Start: $local_fs $remote_fs
+# Required-Stop: $local_fs $remote_fs
+# Should-Start: $time $network $syslog iptables firehol shorewall ferm
+# Should-Stop: $network $syslog iptables firehol shorewall ferm
+# Default-Start: 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Start/Stop dynamiccluster
+# Description: Start/Stop dynamiccluster, a daemon that starts and stops instances in the cloud for a job scheduler
+### END INIT INFO
+
+CONFIG_FILE="/etc/dynamiccluster/dynamiccluster.yaml"
+ROOT_DIR="/opt/dynamiccluster"
+prog="dynamiccluster"
+exec_name="dynamiccluster.py"
+VAR_RUN_DIR="/var/run/dynamiccluster"
+VAR_LOG_DIR="/var/log/dynamiccluster"
+pidfile=${PIDFILE-/var/run/dynamiccluster/dynamiccluster.pid}
+RUN_AS="root"
+
+system=unknown
+if [ -f /etc/redhat-release ]; then
+    system=redhat
+elif [ -f /etc/system-release ]; then
+    system=redhat
+elif [ -f /etc/debian_version ]; then
+    system=debian
+fi
+
+if [ "$system" = "redhat" ]; then
+    ## source platform specific external scripts
+    . /etc/init.d/functions
+    [ -r /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+
+    ## set or override platform specific variables
+    lockfile=${LOCKFILE-/var/lock/subsys/$prog}
+
+    echo_ok() {
+        echo_success; echo
+    }
+    echo_fail() {
+        echo_failure; echo
+    }
+    log_success_msg() {
+        success $"$@"
+    }
+    log_failure_msg() {
+        failure $"$@"
+        echo $"$@"
+    }
+    log_action_msg() {
+        echo $@
+    }
+    run_program() {
+    	su - $RUN_AS -c "$@" > /dev/null
+    }
+fi
+
+if [ "$system" = "debian" ]; then
+    ## source platform specific external scripts
+    . /lib/lsb/init-functions
+    [ -r /etc/default/$prog ] && . /etc/default/$prog
+
+    ## set or override platform specific variables
+    lockfile=${LOCKFILE-/var/lock/$prog}
+
+    echo_ok() {
+        log_end_msg 0
+    }
+    echo_fail() {
+        log_end_msg 1
+    }
+    run_program() {
+        sudo -u $RUN_AS $@ > /dev/null
+    }
+fi
+
+MAINPROG="$ROOT_DIR/$exec_name"
+
+# Check that the config file exists
+[ -f $CONFIG_FILE ] || exit 0
+
+ensure_dir() {
+    if [ ! -d $1 ]; then
+        mkdir -p $1
+        chown -R $2 $1
+        chmod 755 $1
+    fi
+}
+
+start() {
+
+    [ -x ${MAINPROG} ] || exit 5
+
+    status &> /dev/null
+
+    if [ $? -eq 0 ]; then
+        log_action_msg "$prog is already running."
+        echo_ok
+        exit 0
+    fi
+
+    ensure_dir $VAR_RUN_DIR $RUN_AS
+    ensure_dir $VAR_LOG_DIR $RUN_AS
+    echo -n $"Starting dynamic cluster: "
+    run_program "${MAINPROG} -c $CONFIG_FILE -p $pidfile -b"
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        touch ${lockfile}
+		echo_ok
+    else
+        echo_fail
+    fi
+    echo
+    return $RETVAL
+}
+
+stop() {
+    echo -n $"Stopping dynamic cluster: "
+    #run_program "${MAINPROG} -c $CONFIG_FILE -p $pidfile -s $socket -k"
+    killproc -p ${pidfile}
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        rm -f ${lockfile} ${pidfile}
+        echo_ok
+    else
+        echo_fail
+    fi
+    echo
+    return $RETVAL
+}
+
+status() {
+    local pid
+
+    # First try "ps"
+    pid=$(pgrep -P1 -fl $exec_name | grep -v grep | grep -v bash | cut -f1 -d" ")
+    if [ -n "$pid" ]; then
+        log_action_msg $"${prog} (pid $pid) is running..."
+        return 0
+    fi
+
+    # Next try "/var/run/*.pid" files
+    if [ -f "$pidfile" ] ; then
+        read pid < "$pidfile"
+        if [ -n "$pid" ]; then
+            log_action_msg $"${prog} dead but pid file exists"
+            return 1
+        fi
+    fi
+
+    # See if $lockfile
+    if [ -f "$lockfile" ]; then
+        log_action_msg $"${prog} dead but subsys locked"
+        return 2
+    fi
+
+    log_action_msg $"${prog} is stopped"
+    return 3
+}
+
+# See how we were called.
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        sleep 1
+        start
+        ;;
+    status)
+        status
+        ;;
+    *)
+        echo $"Usage: dynamiccluster {start|stop|restart|status}"
+        exit 2
+esac
+
+exit $?

@@ -99,6 +99,9 @@ def check_node(wn, check_node_command):
                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (cmd_out, cmd_err) = sp.communicate(input=None)
         returncode = sp.returncode
+        if returncode == 1 and "cannot locate node" in cmd_err:
+            log.error("node %s doesn't exist in maui." % wn.hostname)
+            return "gone", 0
         if returncode != 0:
             log.error("checknode returns error, probably the node does not exist. returncode %s" % returncode)
             log.debug("cmd_out %s cmd_err %s" % (cmd_out,cmd_err))
@@ -211,10 +214,29 @@ def set_node_online(wn, set_node_command):
         returncode = sp.returncode
 #           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
         if returncode != 0:
-            log.error("Error setting node %s online"%wn.hostname)
+            log.error("Error setting node %s online: %s; %s"%(wn.hostname,cmd_out, cmd_err))
     except:
         log.exception("Problem running set_node_command %s, unexpected error"%wn.hostname)
         return
+
+def show_res_of_node(wn, showres_command):
+    log.debug("getting reservations of node %s"%wn.hostname)
+    cmd=showres_command.format(wn.hostname)
+    log.debug("cmd %s"%cmd)
+    try:
+        sp = subprocess.Popen(cmd, shell=True,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+#           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
+        if returncode != 0:
+            log.debug("can't find reservation for node %s, return code %s"%(wn.hostname, returncode))
+            log.debug("cmd_out %s cmd_err %s"%(cmd_out, cmd_err))
+            return None
+        return cmd_out
+    except:
+        log.exception("Problem running %s, unexpected error" % cmd)
+        return None
 
 def set_res_for_node(wn, res_type, res_name, setres_command):
     log.debug("setting reservation (type=%s) for node %s"%(res_type, wn.hostname))
@@ -234,9 +256,11 @@ def set_res_for_node(wn, res_type, res_name, setres_command):
         if returncode != 0:
             log.error("Error reservation for node %s, return code %s"%(wn.hostname, returncode))
             log.debug("cmd_out %s cmd_err %s"%(cmd_out, cmd_err))
+            return False
+        return True
     except:
         log.exception("Problem running %s, unexpected error" % string.join(set_res, " "))
-        return
+        return False
 
 def release_res_for_node(wn, res_name, releaseres_command):
     log.debug("releasing reservation %s for node %s"%(res_name, wn.hostname))
@@ -254,3 +278,38 @@ def release_res_for_node(wn, res_name, releaseres_command):
     except:
         log.exception("Problem running %s, unexpected error" % release_node)
         return
+
+def delete_job(jobid, del_job_command):
+    log.debug("deleting job %s"%jobid)
+    del_job = del_job_command.format(jobid)
+    log.debug("cmd %s"%del_job)
+    try:
+        sp = subprocess.Popen(del_job, shell=True,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+#           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
+        if returncode != 0:
+            log.error("Error deleting job %s, return code %s"%(jobid, returncode))
+            log.debug("cmd_out %s cmd_err %s"%(cmd_out, cmd_err))
+    except:
+        log.exception("Problem running %s, unexpected error" % del_job)
+        return
+
+def signal_job(jobid, signal, signal_job_command):
+    log.debug("sending signal %s to job %s"%(signal,jobid))
+    qsig_job = signal_job_command.format(signal, jobid)
+    log.debug("cmd %s"%qsig_job)
+    try:
+        sp = subprocess.Popen(qsig_job, shell=True,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd_out, cmd_err) = sp.communicate(input=None)
+        returncode = sp.returncode
+#           log.verbose("%s: %s %s"%(string.join(add_node, " ")%cmd_out%cmd_err))
+        if returncode != 0:
+            log.error("Error sending signal %s to job %s, return code %s"%(signal, jobid, returncode))
+            log.debug("cmd_out %s cmd_err %s"%(cmd_out, cmd_err))
+    except:
+        log.exception("Problem running %s, unexpected error" % qsig_job)
+        return
+    

@@ -26,13 +26,8 @@ dynamic-cluster:
   #   the basic one is to check if a port is opened (e.g. if a service is running and listening on a port)
     port:
       number: 15002
-  # a script to be executed after adding a node to Torque (just before setting it to online) 
-  #  it takes two parameters which are the hostname of the VM and the IP of the VM
-  #post_add_node_command: /the/path/some.sh {0} {1}
-  
-  # a script to be executed after removing a node from Torque (after it is destroyed from the cloud)
-  #  it takes two parameters which are the hostname of the VM and the IP of the VM
-  #post_remove_node_command: /the/path/some.sh {0} {1}
+  # plugin:
+  #   name: dynamiccluster.salt.SaltChecker
   
   # a script to be executed after cloud provisioning is finished (VM state in the cloud becomes ACTIVE) 
   #  it takes two parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
@@ -81,12 +76,29 @@ cluster:
     # the command to get jobs' priorities
     diagnose_p_command: /usr/bin/diagnose -p
     
+    # the command to show reservations of a node
+    showres_command: /usr/bin/showres -n | grep {0}
+
     # the command to set account_string to a node
     setres_command: /usr/bin/setres {0} {1} {2}
     
     # the command to unset account_string in a node
     releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | grep {1} | awk '{{print $3}}' `
-  
+
+    # the command to delete a job
+    delete_job_command: /usr/bin/qdel -p {0}
+
+    # the command to send a signal to a job
+    signal_job_command: /usr/bin/qsig -s {0} {1}
+      
+    # a script to be executed after adding a node to Torque (just before setting it to online) 
+    #  it takes two parameters which are the hostname of the VM and the IP of the VM
+    #post_add_node_command: /the/path/some.sh {0} {1}
+    
+    # a script to be executed after removing a node from Torque (after it is destroyed from the cloud)
+    #  it takes two parameters which are the hostname of the VM and the IP of the VM
+    #post_remove_node_command: /the/path/some.sh {0} {1}
+
 cluster:
   type: sge
   config:
@@ -174,6 +186,8 @@ cloud:
       key_name:
       security_groups:
       availability_zone:
+      subnet_id:
+      use_public_ip_address:
       instance_name_prefix:
       userdata_file:
       validate_certs: False
@@ -181,4 +195,18 @@ cloud:
       spot_timeout:
       #proxy:
       #proxy_port:
+      
+plugins:
+  graphite:
+    class_name: dynamiccluster.graphite.GraphiteReporter
+    arguments:
+      hostname: localhost
+      port: 2003
+      prefix: headnode.dynamiccluster
+
+logging:
+    log_level: 3
+    log_location: /tmp/dynamiccluster.log
+    log_format: "%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s"
+    log_max_size: 2097152
       

@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import time
 import datetime
 from dynamiccluster.utilities import getLogger, unix_time
+from dynamiccluster.hooks import run_post_command
 
 log = getLogger(__name__)
 
@@ -16,19 +17,65 @@ class ClusterManager(object):
         self.config=config
         self.state=state
     def get_state(self):
+        """
+        get cluster's state
+        """
         return self.state
     def get_config(self):
+        """
+        get cluster's config
+        """
         return self.config
     def update_worker_nodes(self, worker_node_list):
+        """
+        update existing worker nodes' status
+        """
         assert 0, 'Must define update_worker_nodes'
+    def check_reservation(self, node, reservation):
+        """
+        check reservation in startup, if not reserved properly, fix it
+        """
+        assert 0, 'Must define check_reservation'
     def query_jobs(self):
+        """
+        get a list of queued jobs
+        """
         assert 0, 'Must define query_jobs'
+    def on_instance_active(self, worker_node, reservation):
+        """
+        this is called once the node is provisioned by the cloud (e.g. it is booting up but IP is available at this moment)
+        """
+        pass
+    def on_instace_ready(self, worker_node, reservation):
+        """
+        this is called once the node is ready (configuration finished)
+        """
+        pass
     def add_node(self, node, reservation):
+        """
+        add the node to cluster with reservation
+        """
         assert 0, 'Must define add_node'
     def hold_node(self, node):
+        """
+        hold the node in cluster so that it won't accept new jobs, existing jobs keep running
+        """
+        assert 0, 'Must define hold_node'
+    def unhold_node(self, node):
+        """
+        unhold the node in cluster and put it back to working state
+        """
         assert 0, 'Must define hold_node'
     def remove_node(self, node):
+        """
+        remove the node from cluster
+        """
         assert 0, 'Must define remove_node'
+    def vacate_node(self, node):
+        """
+        kill all jobs on this node (so it can be removed etc)
+        """
+        assert 0, 'Must define vacate_node'
     
 class TorqueManager(ClusterManager):
     def __init__(self, config):
@@ -65,7 +112,9 @@ class TorqueManager(ClusterManager):
                 node_state, s = torque_utils.check_node(the_node, self.config['check_node_command'])
                 the_node.time_in_current_state=s
                 the_node.state_start_time=0
-                if "offline" in node["state"].lower():
+                if "mom-list-not-sent" in node["state"].lower():
+                    the_node.state=WorkerNode.Starting
+                elif "offline" in node["state"].lower():
                     if node_state == "drained":
                         the_node.state=WorkerNode.Held
                     else:
@@ -82,7 +131,11 @@ class TorqueManager(ClusterManager):
                     the_node.jobs=None
                 the_node.extra_attributes={"mom_service_port": node["mom_service_port"], 
                                              "mom_manager_port": node["mom_manager_port"],
-                                             "gpus": node["gpus"], "ntype": node["ntype"]}
+                                             "ntype": node["ntype"]}
+                if "gpus" in node:
+                    the_node.extra_attributes["gpus"]=node["gpus"]
+                if "properties" in node:
+                    the_node.extra_attributes["properties"]=node["properties"]
                 if "status" in node:
                     the_node.extra_attributes["status"]=node["status"]
             if len(nodes)>0:
@@ -96,7 +149,7 @@ class TorqueManager(ClusterManager):
         self.state["torque"], qstat_output=torque_utils.job_query(self.config['qstat_command'])
         self.state["maui"], diag_p_output=torque_utils.job_query(self.config['diagnose_p_command'])
         if len(qstat_output)==0:
-            log.debug("There is no job in the queue.")
+            log.notice("There is no job in the queue.")
             return [], 0
         try:
             queued_jobs = []
@@ -129,7 +182,7 @@ class TorqueManager(ClusterManager):
         except:
             log.exception("cannot parse qstat output: %s" % qstat_output)
             return [], 0
-    
+        log.notice("jobs: %s" % raw_queued_jobs)
         try:
             lines=diag_p_output.split("\n")
             for each_line in lines[5:]:
@@ -139,13 +192,18 @@ class TorqueManager(ClusterManager):
                 items=each_line.split()
                 #log.notice("items %s"%items)
                 job_id=items[0].strip()
+                if job_id not in raw_queued_jobs:
+                    continue
                 job_dict=raw_queued_jobs[job_id]
                 job=Job(job_id)
                 job.name=job_dict["Job_Name"]
                 job.owner=job_dict["Job_Owner"]
-                job.queue=job_dict["queue"]
-                job.requested_walltime=job_dict["Resource_List.walltime"]
-                job.requested_mem=job_dict["Resource_List.mem"]
+                if "queue" in job_dict:
+                    job.queue=job_dict["queue"]
+                if "Resource_List.walltime" in job_dict:
+                    job.requested_walltime=job_dict["Resource_List.walltime"]
+                if "Resource_List.mem" in job_dict:
+                    job.requested_mem=job_dict["Resource_List.mem"]
                 if "Resource_List.nodes" in job_dict:
                     strs=job_dict["Resource_List.nodes"].split(":")
                     num_cores=1
@@ -172,7 +230,6 @@ class TorqueManager(ClusterManager):
                 #    job.requested_proc=ProcRequirement()
                 if "Account_Name" in job_dict:
                     job.account=job_dict["Account_Name"]
-                job.requested_mem=job_dict["Resource_List.mem"]
                 job.state=Job.Queued
                 job.creation_time=job_dict['ctime']
                 job.priority=int(items[1].strip().replace('*',''))
@@ -185,6 +242,45 @@ class TorqueManager(ClusterManager):
             log.exception("cannot parse diagnose_p output: %s" % diag_p_output)
             return [], 0
             
+    def on_instance_ready(self, worker_node, reservation):
+        log.debug("workernode %s is ready, add it to cluster"%worker_node.hostname)
+        if self.add_node(worker_node, reservation):
+            # run post add_node_command here!
+            if "post_add_node_command" in self.config:
+                run_post_command(worker_node, self.config["post_add_node_command"])
+        else:
+            log.debug("cannot add node %s to cluster, delete it"%worker_node.hostname)
+            self.remove_node(worker_node, reservation)
+            if "post_remove_node_command" in self.config:
+                run_post_command(worker_node, self.config["post_remove_node_command"])
+            worker_node.state=WorkerNode.Deleting
+            worker_node.state_start_time=time.time()
+            
+    def check_reservation(self, wn, reservation):
+        current_res=torque_utils.show_res_of_node(wn, self.config['showres_command'])
+        if "queue" in reservation and reservation['queue'] is not None:
+            need_fix=True
+            if current_res is not None:
+                res_line=[l for l in current_res.split('\n') if reservation['queue']+'.' in l]
+                if len(res_line)>0:
+                    need_fix=False
+            if need_fix:
+                log.debug("node %s is not reserved for queue %s, fix it now"%(wn.hostname,reservation['queue'] ))
+                torque_utils.set_res_for_node(wn, "queue", reservation['queue'], self.config['setres_command'])
+        if "account" in reservation and reservation['account'] is not None:
+            need_fix=True
+            if current_res is not None:
+                res_line=[l for l in current_res.split('\n') if reservation['account']+'.' in l]
+                if len(res_line)>0:
+                    need_fix=False
+            if need_fix:
+                log.debug("node %s is not reserved for account %s, fix it now"%(wn.hostname,reservation['account'] ))
+                torque_utils.set_res_for_node(wn, "account", reservation['account'], self.config['setres_command'])
+        if "property" in reservation and reservation['property'] is not None:
+            if 'properties' not in wn.extra_attributes or reservation['property'] not in wn.extra_attributes['properties']:
+                log.debug("node %s is not reserved for property %s, fix it now"%(wn.hostname,reservation['property'] ))
+                torque_utils.set_node_property(wn, reservation['property'], self.config['set_node_command'])
+        
     def add_node(self, wn, reservation):
         log.debug("adding node %s to cluster with reservation %s" % (wn, reservation))
         retry=5
@@ -197,11 +293,13 @@ class TorqueManager(ClusterManager):
         if not ret:
             log.error("cannot add %s to torque, delete it" % vm.hostname)
             return False
+        torque_utils.set_np(wn, self.config['set_node_command'])
+        #time.sleep(2)
         #check if the new VM is added to torque
         retry=60
         while retry>0:
             node_state, s = torque_utils.check_node(wn, self.config['check_node_command'])
-            if node_state is not None:
+            if node_state is not None and node_state!='gone':
                 break
             retry-=1
             log.debug("vm %s is not showing in maui yet" % wn.hostname)
@@ -210,16 +308,29 @@ class TorqueManager(ClusterManager):
             log.error("cannot see %s in maui, delete it" % wn.hostname)
             torque_utils.remove_node_from_torque(wn, self.config['remove_node_command'])
             return False
-        torque_utils.set_np(wn, self.config['set_node_command'])
-        time.sleep(2)
         # set account string to wn
         if "queue" in reservation and reservation['queue'] is not None:
-            torque_utils.set_res_for_node(wn, "queue", reservation['queue'], self.config['setres_command'])
+            retry=5
+            while retry>0:
+                if torque_utils.set_res_for_node(wn, "queue", reservation['queue'], self.config['setres_command'])==True:
+                    break
+                retry-=1
+            if retry==0:
+                log.error("cannot set reservation for %s, delete it"% wn.hostname)
+                return False
         if "account" in reservation and reservation['account'] is not None:
-            torque_utils.set_res_for_node(wn, "account", reservation['account'], self.config['setres_command'])
+            retry=5
+            while retry>0:
+                if torque_utils.set_res_for_node(wn, "account", reservation['account'], self.config['setres_command'])==True:
+                    break
+                retry-=1
+            if retry==0:
+                log.error("cannot set reservation for %s, delete it"% wn.hostname)
+                return False
         if "property" in reservation and reservation['property'] is not None:
             torque_utils.set_node_property(wn, reservation['property'], self.config['set_node_command'])
             time.sleep(2)
+        # this is not needed for Torque 5.1.1
         torque_utils.set_node_online(wn, self.config['set_node_command'])
         time.sleep(2)
         return True
@@ -235,12 +346,12 @@ class TorqueManager(ClusterManager):
         retry=60
         while retry>0:
             node_state, s = torque_utils.check_node(wn, self.config['check_node_command'])
-            if node_state in ["drained", "down"]:
+            if node_state in ["drained", "down", "gone"]:
                 break
             retry-=1
             log.debug("state of wn %s is not populated to maui yet" % wn.hostname)
             time.sleep(1)
-        if node_state not in ["drained", "down"]:
+        if node_state not in ["drained", "down", "gone"]:
             log.error("cannot see updated state of %s in maui, try again later" % wn.hostname)
             return False
         torque_utils.remove_node_from_torque(wn, self.config['remove_node_command'])
@@ -249,7 +360,21 @@ class TorqueManager(ClusterManager):
     def hold_node(self, wn):
         log.debug("hold node %s in cluster" % wn)
         torque_utils.hold_node_in_torque(wn, self.config['pbsnodes_command'])
+        
+    def unhold_node(self, wn):
+        log.debug("unhold node %s in cluster" % wn)
+        torque_utils.set_node_online(wn, self.config['set_node_command'])
 
+    def vacate_node(self, wn):
+        if wn.jobs is None:
+            return
+        log.debug("jobs %s" % wn.jobs)
+        for jobid in wn.jobs.split(", "):
+            if "/" in jobid:
+                jobid=jobid.split('/')[1]
+            log.debug("killing job %s" % jobid)
+            torque_utils.signal_job(jobid, "9", self.config['signal_job_command'])
+            torque_utils.delete_job(jobid, self.config['delete_job_command'])
 
 class SGEManager(ClusterManager):
     def __init__(self, config):
@@ -293,7 +418,7 @@ class SGEManager(ClusterManager):
                         if the_node.state!=WorkerNode.Held:
                             the_node.state_start_time=time.time()
                         the_node.state=WorkerNode.Held
-                    if "E" in node["queue.state_string"] or ("u" in node["queue.state_string"] and the_node.state!=WorkerNode.Configuring):
+                    if "E" in node["queue.state_string"] or ("u" in node["queue.state_string"] and the_node.state!=WorkerNode.Starting):
                         if the_node.state!=WorkerNode.Error:
                             the_node.state_start_time=time.time()
                         the_node.state=WorkerNode.Error
@@ -389,6 +514,30 @@ class SGEManager(ClusterManager):
             log.exception("cannot parse qstat output: %s" % qstat_output)
             return [], 0
     
+    def on_instance_active(self, worker_node, reservation):
+        log.debug("workernode %s is provisioned, add it to cluster"%worker_node.hostname)
+        if self.add_node(worker_node, reservation):
+            #workernodes[0].state=WorkerNode.Idle
+            #workernodes[0].state_start_time=time.time()
+            # run post add_node_command here!
+            if "post_add_node_command" in self.config:
+                run_post_command(worker_node, self.config["post_add_node_command"])
+        else:
+            log.debug("cannot add node %s to cluster, delete it"%worker_node.hostname)
+            self.remove_node(worker_node, reservation)
+            if "post_remove_node_command" in self.config:
+                run_post_command(worker_node, self.config["post_remove_node_command"])
+            worker_node.state=WorkerNode.Deleting
+            worker_node.state_start_time=time.time()
+
+    def on_instance_ready(self, worker_node, reservation):
+        log.info("workernode %s is ready now."%worker_node.hostname)
+        worker_node.state=WorkerNode.Idle
+        worker_node.state_start_time=time.time()
+    
+    def check_reservation(self, wn, reservation):
+        return
+    
     def add_node(self, wn, reservation):
         if sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-aattr", reservation['account']):
             return sge_utils.set_slots(wn, self.config['set_slots_command'], reservation['queue'])
@@ -396,16 +545,28 @@ class SGEManager(ClusterManager):
         
     def hold_node(self, wn):
         log.debug("hold node %s in cluster" % wn)
-        sge_utils.hold_node_in_sge(wn, self.config['qmod_command'])
+        sge_utils.disable_node_in_sge(wn, self.config['qmod_command'])
+
+    def unhold_node(self, wn):
+        log.debug("unhold node %s in cluster" % wn)
+        torque_utils.enable_node_in_sge(wn, self.config['set_node_command'])
 
     def remove_node(self, wn, reservation):
         log.debug("removing node %s from cluster" % wn)
         if wn.jobs:
-            for j in jobs:
-                log.debug("deleting job %s"%j)
-                sge_utils.delete_job(j)
+            return False
+#             for j in jobs:
+#                 log.debug("deleting job %s"%j)
+#                 sge_utils.delete_job(j)
         sge_utils.update_hostgroup(wn, self.config['hostgroup_command'], "-dattr", reservation['account'])
         time.sleep(.5)
         sge_utils.unset_slots(wn, self.config['unset_slots_command'], reservation['queue'])
         time.sleep(.5)
         return sge_utils.remove_node_from_sge(wn, self.config['remove_node_command'])
+
+    def vacate_node(self, wn):
+        if wn.jobs is None:
+            return
+        for j in jobs:
+            log.debug("deleting job %s"%j)
+            sge_utils.delete_job(j)

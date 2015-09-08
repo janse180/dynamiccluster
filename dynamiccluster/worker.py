@@ -1,6 +1,9 @@
 import multiprocessing
 import signal
-from dynamiccluster.utilities import getLogger
+import time
+import sys
+import errno
+from dynamiccluster.utilities import getLogger, init_object, excepthook
 from Queue import Empty
 from dynamiccluster.os_manager import OpenStackManager
 from dynamiccluster.aws_manager import AWSManager
@@ -36,14 +39,23 @@ class Worker(multiprocessing.Process):
         self.__result_queue=result_queue
         self.__running=True
         
+    def __sigTERMhandler(self, signum, frame):
+        log.debug("Caught signal %d. Exiting" % signum)
+        self.quit()
+        
+    def quit(self):
+        self.__running=False
+
     def run(self):
         #stop child process propagating signals to parent
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, self.__sigTERMhandler)
+        signal.signal(signal.SIGTERM, self.__sigTERMhandler)
+        sys.excepthook = excepthook
         log.debug("worker %s started"%self.__id)
         while self.__running:
             try:
                 log.notice("worker %s waiting for task, is running? %s"%(self.__id,self.__running))
+                task=None
                 try:
                     task=self.__task_queue.get(timeout=1)
                     log.debug("got task %s"%task)
@@ -54,15 +66,19 @@ class Worker(multiprocessing.Process):
                     elif task.type==Task.UpdateCloudState:
                         cloud_manager=self.__get_cloud_manager(task.data['resource'])
                         instance=cloud_manager.update(instance=task.data['instance'])
+                        instance.last_update_time=time.time()
                         self.__result_queue.put(Result(Result.UpdateCloudState, Result.Success, {'instance':instance}))
                     elif task.type==Task.UpdateConfigStatus:
                         checker=self.__get_config_checker(task.data['checker'])
                         instance=checker.check(instance=task.data['instance'])
+                        instance.last_update_time=time.time()
                         self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':instance}))
                     elif task.type==Task.Destroy:
                         cloud_manager=self.__get_cloud_manager(task.data['resource'])
                         if cloud_manager.destroy(instance=task.data['instance']):
-                            self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':task.data['instance']}))
+                            instance=cloud_manager.update(instance=task.data['instance'])
+                            task.data['instance'].last_update_time=time.time()
+                            self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':instance}))
                         else:
                             self.__result_queue.put(Result(task.type, Result.Failed, task.data))
                     elif task.type==Task.Quit:
@@ -70,6 +86,9 @@ class Worker(multiprocessing.Process):
                         break
                 except Empty:
                     pass
+                except IOError, e:            
+                    if e.errno == errno.EINTR:
+                        break
                 except Exception as e:
                     log.exception("task (%s) cannot be executed." % task)
                     self.__result_queue.put(Result(task.type, Result.Failed, task.data))
@@ -92,6 +111,9 @@ class Worker(multiprocessing.Process):
     def __get_config_checker(self, config):
         if config.keys()[0].lower()=="port":
             return PortChecker(port=config['port']['number'])
+        elif config.keys()[0].lower()=="plugin":
+            plugin_name=config['plugin']['name']
+            return init_object(plugin_name)
         else:
             raise ConfigCheckerNotSupportedException("Config checker %s is not supported" % config.keys()[0])
         

@@ -1,24 +1,26 @@
 #!/usr/bin/python
 
 import getopt, sys, os
-from dynamiccluster.server import Server
+from dynamiccluster.server import DynamicServer
 from dynamiccluster.__version__ import version
 import os.path
 import logging
-from dynamiccluster.utilities import getLogger
+from dynamiccluster.utilities import getLogger, get_log_level
 from dynamiccluster.exceptions import NoClusterDefinedException
+import traceback
+import yaml
 
 # Gets the instance of the logger.
 log = getLogger("dynamiccluster")
 
-class DynamicClusterServer(object):
+class DynamicClusterLoader(object):
 	def __init__(self):
 		self.__server = None
 		self.__argv = None
 		self.__conf = dict()
 		self.__conf["background"] = False
-		self.__conf["pidfile"] = "/var/run/dynamiccluster/server.pid"
-		self.__conf["verbose"] = 1
+		self.__conf["pidfile"] = "/tmp/dynamiccluster.pid"
+		self.__conf["verbose"] = 0
 		self.__conf["configfile"] = "/etc/dynamiccluster/dynamiccluster.yaml"
 
 	def displayVersion(self):
@@ -64,7 +66,7 @@ class DynamicClusterServer(object):
 				self.displayVersion()
 				sys.exit(0)
 
-	def start(self, argv):
+	def bootstrap(self, argv):
 		# Command line options
 		self.__argv = argv
 
@@ -79,44 +81,67 @@ class DynamicClusterServer(object):
 
 		self.__getCmdLineOptions(optList)
 		verbose = self.__conf["verbose"]
-		#sys.stdout.write("Setting log level to %d\n" % verbose)
-		if verbose <= 0:
-			log.setLevel(logging.ERROR)
-		elif verbose == 1:
-			log.setLevel(logging.WARNING)
-		elif verbose == 2:
-			log.setLevel(logging.INFO)
-		elif verbose == 3:
-			log.setLevel(logging.DEBUG)
-		else:
-			log.setLevel(logging.NOTICE)
-		# Add the default logging handler to dump to stderr
-		logout = logging.StreamHandler(sys.stderr)
-		# set a format which is simpler for console use
-		formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s')
-		# tell the handler to use this format
-		logout.setFormatter(formatter)
-		log.addHandler(logout)
+		
+		if not os.path.exists(self.__conf["configfile"]) or not os.path.isfile(self.__conf["configfile"]):
+			print "Config file %s does not exist or is not a file." % self.__conf["configfile"]
+			sys.exit(1)
 
-		if not os.path.isfile(self.__conf["configfile"]):
-			sys.stderr.write("Configuration file %s does not exist.\n" % self.__conf["configfile"])
-			return False
+		config=yaml.load(open(self.__conf["configfile"], 'r'))
+
+		if 'logging' in config:
+			if 'log_level' in config['logging']:
+				log.setLevel(get_log_level(config['logging']['log_level']))
+			if not self.__conf["background"]:
+				# Add the default logging handler to dump to stderr
+				logout = logging.StreamHandler(sys.stderr)
+				# set a format which is simpler for console use
+				formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s')
+				# tell the handler to use this format
+				logout.setFormatter(formatter)
+				log.addHandler(logout)
+			elif self.__conf["background"]:
+				log_formatter = logging.Formatter(config['logging']['log_format'])
+				file_handler = None
+				if 'log_max_size' in config['logging']:
+					file_handler = logging.handlers.RotatingFileHandler(
+													config['logging']['log_location'],
+													maxBytes=config['logging']['log_max_size'],
+													backupCount=3)
+				else:
+					try:
+						file_handler = logging.handlers.WatchedFileHandler(
+													config['logging']['log_location'],)
+					except AttributeError:
+						# Python 2.5 doesn't support WatchedFileHandler
+						file_handler = logging.handlers.RotatingFileHandler(
+													config['logging']['log_location'],)
+		
+				file_handler.setFormatter(log_formatter)
+				log.addHandler(file_handler)
+		if verbose>0:
+			log.setLevel(get_log_level(verbose))
+
+		dynamic_cluster_server = DynamicServer(config, self.__conf["pidfile"], os.path.dirname(os.path.realpath(__file__)))
 		try:
-			self.__server = Server(self.__conf["background"], self.__conf["pidfile"], self.__conf["configfile"])
-			self.__server.start()
-			return True
+			dynamic_cluster_server.init()
 		except NoClusterDefinedException:
 			sys.stderr.write("You must define a valid cluster in config file.\n")
-			self.__server.quit()
+			#dynamic_cluster_server.quit()
 			return False
 		except Exception, e:
-			log.exception(e)
-			self.__server.quit()
+			#log.exception(e)
+			print traceback.format_exc()
+			#dynamic_cluster_server.quit()
 			return False
+		if self.__conf["background"]:
+			dynamic_cluster_server.start()
+		else:
+			dynamic_cluster_server.run()
+		return True
 
 if __name__ == "__main__":
-	server = DynamicClusterServer()
-	if server.start(sys.argv):
+	loader = DynamicClusterLoader()
+	if loader.bootstrap(sys.argv):
 		sys.exit(0)
 	else:
 		sys.exit(-1)

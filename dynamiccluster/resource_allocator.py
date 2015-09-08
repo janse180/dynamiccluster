@@ -14,17 +14,10 @@ class ResourceAllocator(object):
         pending_jobs.sort(key=lambda job: job.priority, reverse=True)
         tasks=[]
         for job in pending_jobs:
-            avail_resources=[r for r in resources]
-            if job.queue is not None:
-                avail_resources=[r for r in avail_resources if r.reservation_queue is None or r.reservation_queue==job.queue]
-            if job.account is not None:
-                avail_resources=[r for r in avail_resources if r.reservation_account is None or r.reservation_account==job.account]
-            if job.property is not None:
-                avail_resources=[r for r in avail_resources if r.reservation_property is None or r.reservation_property==job.property]
-            if len(avail_resources)==0:
-                log.notice("cannot find a suitable resource for job %s" % job.jobid)
+            avail_resources=self.get_available_resources(job, resources)
+            if avail_resources is None:
                 continue
-            avail_resources.sort(key=lambda r: r.priority)
+            log.debug("filtered avail_resources %s"%[r.name for r in avail_resources])
             for res in avail_resources:
                 if res.proposed_allocation is None:
                     res.proposed_allocation=[]
@@ -36,6 +29,36 @@ class ResourceAllocator(object):
                 tasks.append(Task(Task.Provision, {"resource": res, "number": len(res.proposed_allocation)}))
                 res.proposed_allocation=None
         return tasks
+
+    def get_available_resources(self, job, resources):
+        avail_resources=set([r for r in resources if self.match(job, r)])
+        log.debug("avail_resources %s"%[r.name for r in avail_resources])
+        if len(avail_resources)==0:
+            log.notice("cannot find a suitable resource for job %s" % job.jobid)
+            return None
+        prioritized_resources=sorted(avail_resources, key=lambda r: (r.priority, r.current_num))
+        avail_resources=[]
+        special_ids=[]
+        for idx, r in enumerate(prioritized_resources):
+            if (r.reservation_account is not None and r.reservation_account==job.account) \
+                    or (r.reservation_property is not None and r.reservation_property==job.property) \
+                    or (r.reservation_queue is not None and r.reservation_queue==job.queue):
+                special_ids.append(idx)
+        for id in reversed(special_ids):
+            avail_resources.insert(0, prioritized_resources.pop(id))
+        avail_resources.extend(prioritized_resources)
+        return avail_resources
+    
+    def match(self, job, res):
+        #if job.queue==res.reservation_queue or job.account==res.reservation_account or job.property==res.reservation_property:
+        #    return True
+        if res.reservation_account is not None and job.account!=res.reservation_account:
+            return False
+        if res.reservation_queue is not None and job.queue!=res.reservation_queue:
+            return False
+        if res.reservation_property is not None and job.property!=res.reservation_property:
+            return False
+        return True
     
     def can_fit(self, job, res):
         if job.cores_per_node>res.cores_per_node:

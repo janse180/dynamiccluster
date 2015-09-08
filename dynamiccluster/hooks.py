@@ -1,5 +1,7 @@
 from dynamiccluster.utilities import getLogger
 
+import string, shlex, subprocess
+
 log = getLogger(__name__)
 
 def run_post_command(wn, command):
@@ -15,6 +17,6 @@ def run_post_command(wn, command):
             log.error("Error running post script for %s"%wn.hostname)
             log.debug("cmd_out %s cmd_err %s"%(cmd_out, cmd_err))
     except:
-        log.exception("Problem running %s, unexpected error" % string.join(post_action, " "))
+        log.exception("Problem running %s, unexpected error" % cmd)
         return 
 
