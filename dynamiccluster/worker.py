@@ -54,7 +54,7 @@ class Worker(multiprocessing.Process):
         log.debug("worker %s started"%self.__id)
         while self.__running:
             try:
-                log.notice("worker %s waiting for task, is running? %s"%(self.__id,self.__running))
+                log.notice("worker %s waiting for task, is running? %s, queue %s size %s"%(self.__id,self.__running,self.__task_queue,self.__task_queue.qsize()))
                 task=None
                 try:
                     task=self.__task_queue.get(timeout=1)
@@ -85,6 +85,7 @@ class Worker(multiprocessing.Process):
                         log.debug("got quit task, existing...")
                         break
                 except Empty:
+                    log.notice("got nothing from task queue")
                     pass
                 except IOError, e:            
                     if e.errno == errno.EINTR:

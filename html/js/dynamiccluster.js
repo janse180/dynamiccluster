@@ -595,15 +595,17 @@ function initSettingView() {
 					  htmlStr+='<tr><td class="info">'+key1+'</td><td>'+val1+'</td></tr>';
 			  });
 		  });
-		  $.each( data['plugins'], function( key, val ) {
-			  htmlStr+='<tr><th colspan="2">Plugin: '+key+'</th></tr>';
-			  $.each( val, function( key1, val1 ) {
-				  if (typeof val1 === 'object') {
-					  htmlStr+='<tr><td class="info">'+key1+'</td><td>'+dictToTable(val1)+'</td></tr>';
-				  }else
-					  htmlStr+='<tr><td class="info">'+key1+'</td><td>'+val1+'</td></tr>';
+		  if ('plugins' in data) {
+			  $.each( data['plugins'], function( key, val ) {
+				  htmlStr+='<tr><th colspan="2">Plugin: '+key+'</th></tr>';
+				  $.each( val, function( key1, val1 ) {
+					  if (typeof val1 === 'object') {
+						  htmlStr+='<tr><td class="info">'+key1+'</td><td>'+dictToTable(val1)+'</td></tr>';
+					  }else
+						  htmlStr+='<tr><td class="info">'+key1+'</td><td>'+val1+'</td></tr>';
+				  });
 			  });
-		  });
+		  }
 		  htmlStr+='<tr><th colspan="2">Logging</th></tr>';
 		  $.each( data['logging'], function( key, val ) {
 			  if (typeof val === 'object') {

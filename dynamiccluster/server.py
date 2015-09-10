@@ -482,6 +482,10 @@ class DynamicEngine(threading.Thread):
         status['auto_mode']=self.__auto
         status['cluster']=self.__cluster.state
         return status
+    
+    def get_queues(self):
+        log.debug("queues: %s %s"%(self.__task_queue, self.__result_queue))
+        return {'tasks': self.__task_queue.qsize(), 'results': self.__result_queue.qsize()}
 
     def launch_new_instance(self, resource_name, number):
         resource=self.get_resource_by_name(resource_name)

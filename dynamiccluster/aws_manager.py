@@ -58,7 +58,7 @@ class AWSManager(CloudManager):
                 if os.path.exists(self.config['userdata_file']) and os.path.isfile(self.config['userdata_file']):
                     userdata_string=load_template_with_jinja(self.config['userdata_file'], {"minion_id":server_name})
                 else:
-                    log.exeception("userdata file does not exist, can't create VM, please check your config.")
+                    log.exception("userdata file does not exist, can't create VM, please check your config.")
                     return None
                 if "spot_bid" in self.config:
                     #start spot

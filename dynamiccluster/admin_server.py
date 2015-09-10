@@ -22,7 +22,7 @@ class AdminServer(threading.Thread):
         global root_path
         log.debug("static js page to return %s"%(page))
         if page=="config.js":
-            if 'graphite' in engine.config['plugins']:
+            if 'plugins' in engine.config and 'graphite' in engine.config['plugins']:
                 graph_view=True
                 graphite_prefix=engine.config['plugins']['graphite']['arguments']['prefix']
                 graphite_hostname=engine.config['plugins']['graphite']['arguments']['hostname']
@@ -124,6 +124,11 @@ class AdminServer(threading.Thread):
     def get_server_status():
         global engine
         return engine.get_status()
+
+    @route('/server/queues')
+    def get_server_queues():
+        global engine
+        return engine.get_queues()
     
     @route('/server/auto', method="PUT")
     def get_server_auto():
@@ -169,7 +174,7 @@ class AdminServer(threading.Thread):
         except NoCloudResourceException:
             return HTTPResponse(status=404, body="Cloud resource %s not found"%res)
         except InsufficientResourceException:
-            return HTTPResponse(status=400, body="You have requested %d worker node(s) in %s but it has exceeded the resource limit."%(num_string,res))
+            return HTTPResponse(status=400, body="You have requested %s worker node(s) in %s but it has exceeded the resource limit."%(num_string,res))
         return HTTPResponse(status=500, body="Unknown error")
     
     def __init__(self, dynaimc_engine=None, working_path=""):
