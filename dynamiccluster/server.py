@@ -441,13 +441,15 @@ class DynamicEngine(threading.Thread):
             if wn.type.lower()=="physical" or wn.instance.tasked==True:
                 continue
             self.trigger(wn)
+        has_new_provision_task=False
         for res in self.resources:
             res.current_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name])
             if self.__auto and res.current_num<res.min_num and (not self.has_starting_worker_nodes(res.name)):
                 log.debug("resource %s has less worker nodes than min value, launch more" % res.name)
                 task=Task(Task.Provision, {"resource": res, "number": res.min_num-res.current_num})
                 self.__task_queue.put(task)
-        if self.__auto and not self.is_provisioning():
+                has_new_provision_task=True
+        if self.__auto and not self.is_provisioning() and not has_new_provision_task:
 #             free_resources=[]
 #             for res in self.resources:
 #                 if not self.has_starting_worker_nodes(res.name):

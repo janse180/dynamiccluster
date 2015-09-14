@@ -134,7 +134,7 @@ class TorqueManager(ClusterManager):
                 elif node_state == "idle":
                     the_node.state=WorkerNode.Idle
                 if "jobs" in node:
-                    the_node.jobs=node["jobs"]
+                    the_node.jobs=", ".join(j.split('.')[0] for j in node["jobs"].split(", "))
                 else:
                     the_node.jobs=None
                 the_node.extra_attributes={"mom_service_port": node["mom_service_port"], 

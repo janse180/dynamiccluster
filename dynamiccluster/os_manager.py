@@ -12,7 +12,7 @@ log = getLogger(__name__)
 try:
     from novaclient import client
     from novaclient.exceptions import NotFound
-except:
+except ImportError:
     sys.stderr.write("python-novaclient is not installed, you won't be able to use OpenStack as your cloud resources.\n")
 
 class OpenStackManager(CloudManager):

@@ -9,45 +9,33 @@ import boto
 import boto.ec2 as ec2
 from boto import config as boto_config
 from boto.connection import HAVE_HTTPS_CONNECTION
-from boto.s3.key import Key
 from boto.ec2.networkinterface import NetworkInterfaceSpecification, NetworkInterfaceCollection
+
+try:
+    import boto3
+except ImportError:
+    sys.stderr.write("boto3 is not installed, you won't be able to use AWS as your cloud resources.\n")
 
 log = getLogger(__name__)
 
 class AWSManager(CloudManager):
     def __init__(self, config, max_attempt_time=5):
         CloudManager.__init__(self, config, max_attempt_time)
-        self.__conn=None
+        self.__ec2=None
         
     @property
-    def conn(self):
+    def ec2(self):
         if self.__conn is None:
             log.debug('creating ec2 connection to %s' % self.config['region_name'])
-            validate_certs = self.config['validate_certs']
-            if validate_certs:
-                if not HAVE_HTTPS_CONNECTION:
-                    raise CloudNotAvailableException(
-                        "Failed to validate AWS SSL certificates. "
-                        "SSL certificate validation is only supported "
-                        "on Python>=2.6.\n\nSet AWS_VALIDATE_CERTS=False in "
-                        "your config to skip SSL certificate verification and"
-                        " suppress this error AT YOUR OWN RISK.")
-            if not boto_config.has_section('Boto'):
-                boto_config.add_section('Boto')
-            # Hack to get around the fact that boto ignores validate_certs
-            # if https_validate_certificates is declared in the boto config
-            boto_config.setbool('Boto', 'https_validate_certificates',
-                                validate_certs)
-            #boto_config.setint('Boto', 'http_socket_timeout',
-            #                    10)
+            validate_certs = self.config.get('validate_certs', None)
             kwargs=dict(aws_access_key_id=self.config['access_key_id'], aws_secret_access_key=self.config['secret_access_key'],
-                validate_certs=self.config['validate_certs'])
+                verify=self.config['validate_certs'])
             if 'proxy' in self.config:
                 kwargs['proxy']=self.config['proxy']
                 kwargs['proxy_port']=self.config['proxy_port']
-            self.__conn = ec2.connect_to_region(self.config['region_name'], **kwargs)
-            self.__conn.https_validate_certificates = validate_certs
-        return self.__conn
+            kwargs['region_name']=self.config['region_name']
+            self.__ec2 = boto3.resource('ec2', **kwargs)
+        return self.__ec2
 
     def boot(self, number=1):
         """ Start new instance """
@@ -82,7 +70,7 @@ class AWSManager(CloudManager):
                         log.error("unable to create spot request")
                         raise CloudNotAvailableException()
                     time.sleep(1)
-                    self.conn.create_tags([req[0].id], {'Name':server_name})
+                    self.ec2.create_tags([req[0].id], {'Name':server_name})
                     instance = Instance(None)
                     instance.instance_name=server_name
                     instance.key_name=self.config['key_name']
@@ -110,7 +98,7 @@ class AWSManager(CloudManager):
                         kwargs['network_interfaces']=interfaces
                     else:
                         kwargs["security_group_ids"]=self.config['security_groups']
-                    reservation = self.conn.run_instances(self.config['image_id'], **kwargs) 
+                    reservation = self.ec2.create_instances(ImageId=self.config['image_id'], **kwargs) 
                     for server in reservation.instances:
                         server.add_tag('Name', server_name)
                         instance = Instance(server.id)
