@@ -3,12 +3,17 @@ from dynamiccluster.data import Instance
 from dynamiccluster.exceptions import CloudNotAvailableException, FlavorNotFoundException
 from dynamiccluster.cloud_manager import CloudManager
 import time
-import datetime
-from novaclient import client
-from novaclient.exceptions import NotFound
 import os
+import datetime
+import sys
 
 log = getLogger(__name__)
+
+try:
+    from novaclient import client
+    from novaclient.exceptions import NotFound
+except:
+    sys.stderr.write("python-novaclient is not installed, you won't be able to use OpenStack as your cloud resources.\n")
 
 class OpenStackManager(CloudManager):
     def __init__(self, name, config, max_attempt_time=5):
