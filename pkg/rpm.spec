@@ -50,8 +50,8 @@ if [ $1 -eq 1 ]; then
 fi
 echo "If you want to use OpenStack as your cloud resoource, please install python-novaclient."
 echo "    e.g. pip install python-novaclient"
-echo "If you want to use AWS as your cloud resoource, please install boto3."
-echo "    e.g. pip install boto3"
+echo "If you want to use AWS as your cloud resoource, please install boto."
+echo "    e.g. pip install boto (You may need to install gcc-c++ and python-devel with yum before installing boto)"
 
 %preun
 if [ $1 -eq 0 ]; then
