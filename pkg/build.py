@@ -10,7 +10,7 @@ from subprocess import check_call
 from contextlib import closing
 
 parser = argparse.ArgumentParser(
-        description='Build dynamic cluster rpms',
+        description='Build dynamic cluster RPM',
         )
 parser.add_argument('buildid',
         help='The build id to use i.e. the bit after the salt version in the package name',

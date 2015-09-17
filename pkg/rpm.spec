@@ -1,6 +1,6 @@
 Name: dynamiccluster
 Version: 0.5.0
-Release: 1%{?dist}
+Release: %{?buildid}%{?dist}
 Summary: A cluster in the cloud solution
 Group:   System Environment/Daemons
 License: ASL 2.0
@@ -39,7 +39,9 @@ EOF
 %{__install} -Dp -m0644 sysconfig-dynamiccluster %{buildroot}%{_sysconfdir}/sysconfig/dynamiccluster
 %{__install} -d %{buildroot}%{_var}/run/dynamiccluster
 %{__install} -d %{buildroot}%{_datadir}/dynamiccluster/
-%{__cp} -r $RPM_BUILD_DIR/%{name}-%{version}/* %{buildroot}%{_datadir}/dynamiccluster/
+%{__cp} -r $RPM_BUILD_DIR/%{name}-%{version}/dynamiccluster* %{buildroot}%{_datadir}/dynamiccluster/
+%{__cp} -r $RPM_BUILD_DIR/%{name}-%{version}/html %{buildroot}%{_datadir}/dynamiccluster/
+%{__cp} -r $RPM_BUILD_DIR/%{name}-%{version}/scripts %{buildroot}%{_datadir}/dynamiccluster/
 
 %clean
 %{__rm} -rf %{buildroot}
