@@ -50,7 +50,7 @@ class OpenStackManager(CloudManager):
                 if os.path.exists(self.config['userdata_file']) and os.path.isfile(self.config['userdata_file']):
                     userdata_string=load_template_with_jinja(self.config['userdata_file'], {"minion_id":server_name})
                 else:
-                    log.exeception("userdata file does not exist, can't create VM, please check your config.")
+                    log.exception("userdata file does not exist, can't create VM, please check your config.")
                     return None
                 server = self.__conn.servers.create(server_name, self.config['image_uuid'], flavor_obj, key_name=self.config['key_name'], max_count=1, min_count=1, userdata=userdata_string, security_groups=self.config['security_groups'], availability_zone=self.config['availability_zone']) #scheduler_hints={'cell':self.default_availability_zone})
                 instance = Instance(server.id)

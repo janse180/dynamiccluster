@@ -435,6 +435,7 @@ class DynamicEngine(threading.Thread):
                     self.__cluster.on_instance_active(worker_node, self.config['cloud'][worker_node.instance.cloud_resource]['reservation'])
                 elif worker_node.state==WorkerNode.Starting and worker_node.instance.state==Instance.Ready:
                     self.__cluster.on_instance_ready(worker_node, self.config['cloud'][worker_node.instance.cloud_resource]['reservation'])
+                    self.__gather_cluster_info()
                 
     def check_existing_worker_nodes(self):
         for wn in self.info.worker_nodes:

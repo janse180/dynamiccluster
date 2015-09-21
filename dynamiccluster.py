@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import getopt, sys, os
 from dynamiccluster.server import DynamicServer
