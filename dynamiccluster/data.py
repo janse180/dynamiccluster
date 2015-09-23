@@ -82,7 +82,8 @@ class ClusterInfo(object):
         self.queued_jobs=queued_jobs
         self.total_queued_job_number=total_queued_job_number
         
-class CloudResource(object):
+class CloudResource(EnumBase):
+    Normal, Frozen, Draining, Drained = range(4)
     def __init__(self, name, **kwargs):
         self.name=name
         self.priority=kwargs['priority']
@@ -92,6 +93,7 @@ class CloudResource(object):
         self.current_num=0
         self.cores_per_node=0
         self.proposed_allocation=None
+        self.flag=0
         self.config=kwargs['config']
         if 'queue' in kwargs['reservation']:
             self.reservation_queue=kwargs['reservation']['queue']
