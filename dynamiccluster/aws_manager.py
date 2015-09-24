@@ -5,12 +5,15 @@ from dynamiccluster.cloud_manager import CloudManager
 import time
 import datetime
 import os
-import boto
-import boto.ec2 as ec2
-from boto import config as boto_config
-from boto.connection import HAVE_HTTPS_CONNECTION
-from boto.s3.key import Key
-from boto.ec2.networkinterface import NetworkInterfaceSpecification, NetworkInterfaceCollection
+
+try:
+    import boto
+    import boto.ec2 as ec2
+    from boto import config as boto_config
+    from boto.connection import HAVE_HTTPS_CONNECTION
+    from boto.ec2.networkinterface import NetworkInterfaceSpecification, NetworkInterfaceCollection
+except ImportError:
+    sys.stderr.write("boto is not installed, you won't be able to use AWS as your cloud resources.\n")
 
 log = getLogger(__name__)
 
@@ -58,7 +61,7 @@ class AWSManager(CloudManager):
                 if os.path.exists(self.config['userdata_file']) and os.path.isfile(self.config['userdata_file']):
                     userdata_string=load_template_with_jinja(self.config['userdata_file'], {"minion_id":server_name})
                 else:
-                    log.exeception("userdata file does not exist, can't create VM, please check your config.")
+                    log.exception("userdata file does not exist, can't create VM, please check your config.")
                     return None
                 if "spot_bid" in self.config:
                     #start spot

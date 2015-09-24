@@ -83,6 +83,8 @@ class TorqueManager(ClusterManager):
         
     def update_worker_nodes(self, worker_node_list):
         self.state["torque"], pbsnodes_output=torque_utils.wn_query(self.config['pbsnodes_command'])
+        if self.state["torque"]==False:
+            return
         if len(pbsnodes_output)==0:
             log.debug("There is no worker node in the queue.")
             return
@@ -110,6 +112,12 @@ class TorqueManager(ClusterManager):
                         the_node.account_string=node["Account_Name"]
                     worker_node_list.append(the_node)
                 node_state, s = torque_utils.check_node(the_node, self.config['check_node_command'])
+                if node_state is None:
+                    log.debug("maui is down.")
+                    self.state['maui']=False
+                    return
+                else:
+                    self.state['maui']=True
                 the_node.time_in_current_state=s
                 the_node.state_start_time=0
                 if "mom-list-not-sent" in node["state"].lower():
@@ -121,12 +129,12 @@ class TorqueManager(ClusterManager):
                         the_node.state=WorkerNode.Holding
                 elif "down" in node_state:
                     the_node.state=WorkerNode.Error
-                elif node_state == "busy":
+                elif node_state == "busy" or node_state == "running":
                     the_node.state=WorkerNode.Busy
                 elif node_state == "idle":
                     the_node.state=WorkerNode.Idle
                 if "jobs" in node:
-                    the_node.jobs=node["jobs"]
+                    the_node.jobs=", ".join(j.split('.')[0] for j in node["jobs"].split(", "))
                 else:
                     the_node.jobs=None
                 the_node.extra_attributes={"mom_service_port": node["mom_service_port"], 
@@ -148,6 +156,8 @@ class TorqueManager(ClusterManager):
     def query_jobs(self):
         self.state["torque"], qstat_output=torque_utils.job_query(self.config['qstat_command'])
         self.state["maui"], diag_p_output=torque_utils.job_query(self.config['diagnose_p_command'])
+        if self.state["torque"]==False or self.state["maui"]==False:
+            return
         if len(qstat_output)==0:
             log.notice("There is no job in the queue.")
             return [], 0
@@ -257,8 +267,8 @@ class TorqueManager(ClusterManager):
             worker_node.state_start_time=time.time()
             
     def check_reservation(self, wn, reservation):
-        current_res=torque_utils.show_res_of_node(wn, self.config['showres_command'])
         if "queue" in reservation and reservation['queue'] is not None:
+            current_res=torque_utils.show_res_of_node(wn, self.config['showres_command'])
             need_fix=True
             if current_res is not None:
                 res_line=[l for l in current_res.split('\n') if reservation['queue']+'.' in l]
@@ -268,6 +278,7 @@ class TorqueManager(ClusterManager):
                 log.debug("node %s is not reserved for queue %s, fix it now"%(wn.hostname,reservation['queue'] ))
                 torque_utils.set_res_for_node(wn, "queue", reservation['queue'], self.config['setres_command'])
         if "account" in reservation and reservation['account'] is not None:
+            current_res=torque_utils.show_res_of_node(wn, self.config['showres_command'])
             need_fix=True
             if current_res is not None:
                 res_line=[l for l in current_res.split('\n') if reservation['account']+'.' in l]

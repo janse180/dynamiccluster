@@ -78,6 +78,7 @@ class SaltChecker(ConfigChecker):
         configured=True
         for check in results[instance.instance_name].keys():
             if results[instance.instance_name][check]['result'] is not True:
+                log.debug("Incomplete config: %s"%results[instance.instance_name][check])
                 configured=False
                 break
         if configured is True:

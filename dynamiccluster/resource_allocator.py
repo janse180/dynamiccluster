@@ -17,7 +17,7 @@ class ResourceAllocator(object):
             avail_resources=self.get_available_resources(job, resources)
             if avail_resources is None:
                 continue
-            log.debug("filtered avail_resources %s"%[r.name for r in avail_resources])
+            log.notice("filtered avail_resources %s"%[r.name for r in avail_resources])
             for res in avail_resources:
                 if res.proposed_allocation is None:
                     res.proposed_allocation=[]
@@ -32,7 +32,7 @@ class ResourceAllocator(object):
 
     def get_available_resources(self, job, resources):
         avail_resources=set([r for r in resources if self.match(job, r)])
-        log.debug("avail_resources %s"%[r.name for r in avail_resources])
+        log.notice("avail_resources %s"%[r.name for r in avail_resources])
         if len(avail_resources)==0:
             log.notice("cannot find a suitable resource for job %s" % job.jobid)
             return None
@@ -56,7 +56,7 @@ class ResourceAllocator(object):
             return False
         if res.reservation_queue is not None and job.queue!=res.reservation_queue:
             return False
-        if res.reservation_property is not None and job.property!=res.reservation_property:
+        if job.property is not None and job.property!=res.reservation_property:
             return False
         return True
     

@@ -3,12 +3,17 @@ from dynamiccluster.data import Instance
 from dynamiccluster.exceptions import CloudNotAvailableException, FlavorNotFoundException
 from dynamiccluster.cloud_manager import CloudManager
 import time
-import datetime
-from novaclient import client
-from novaclient.exceptions import NotFound
 import os
+import datetime
+import sys
 
 log = getLogger(__name__)
+
+try:
+    from novaclient import client
+    from novaclient.exceptions import NotFound
+except ImportError:
+    sys.stderr.write("python-novaclient is not installed, you won't be able to use OpenStack as your cloud resources.\n")
 
 class OpenStackManager(CloudManager):
     def __init__(self, name, config, max_attempt_time=5):
@@ -45,7 +50,7 @@ class OpenStackManager(CloudManager):
                 if os.path.exists(self.config['userdata_file']) and os.path.isfile(self.config['userdata_file']):
                     userdata_string=load_template_with_jinja(self.config['userdata_file'], {"minion_id":server_name})
                 else:
-                    log.exeception("userdata file does not exist, can't create VM, please check your config.")
+                    log.exception("userdata file does not exist, can't create VM, please check your config.")
                     return None
                 server = self.__conn.servers.create(server_name, self.config['image_uuid'], flavor_obj, key_name=self.config['key_name'], max_count=1, min_count=1, userdata=userdata_string, security_groups=self.config['security_groups'], availability_zone=self.config['availability_zone']) #scheduler_hints={'cell':self.default_availability_zone})
                 instance = Instance(server.id)
@@ -174,7 +179,7 @@ class OpenStackManager(CloudManager):
             return Instance.Error
         elif server.status == "ACTIVE":
             return Instance.Active
-        elif server.status == "DELETING" or server.status == "DELETED" or getattr(server,"OS-EXT-STS:task_state") == "Deleting":
+        elif server.status == "DELETING" or server.status == "DELETED" or getattr(server,"OS-EXT-STS:task_state").lower() == "deleting":
             return Instance.Deleting
         elif server.status != "ACTIVE" or getattr(server,"OS-EXT-STS:vm_state") != "active" or getattr(server,"OS-EXT-STS:task_state") is not None:
             return Instance.Starting

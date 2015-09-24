@@ -3,6 +3,7 @@ from bottle import route, run, static_file, request, HTTPError, HTTPResponse
 import threading
 from dynamiccluster.utilities import getLogger, get_prefix
 from dynamiccluster.exceptions import *
+from dynamiccluster.data import CloudResource
 import os
 
 log = getLogger(__name__)
@@ -22,7 +23,7 @@ class AdminServer(threading.Thread):
         global root_path
         log.debug("static js page to return %s"%(page))
         if page=="config.js":
-            if 'graphite' in engine.config['plugins']:
+            if 'plugins' in engine.config and 'graphite' in engine.config['plugins']:
                 graph_view=True
                 graphite_prefix=engine.config['plugins']['graphite']['arguments']['prefix']
                 graphite_hostname=engine.config['plugins']['graphite']['arguments']['hostname']
@@ -124,6 +125,11 @@ class AdminServer(threading.Thread):
     def get_server_status():
         global engine
         return engine.get_status()
+
+    @route('/server/queues')
+    def get_server_queues():
+        global engine
+        return engine.get_queues()
     
     @route('/server/auto', method="PUT")
     def get_server_auto():
@@ -145,15 +151,40 @@ class AdminServer(threading.Thread):
             return HTTPResponse(status=404, body="resource %s not found" % res_name)
         for res in res_list:
             res.worker_nodes=[w for w in engine.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name]
+            res_config=engine.config['cloud'][res.name]
+            if res.min_num!=res_config['quantity']['min'] or res.max_num!=res_config['quantity']['max']:
+                if res.min_num==0 and res.min_num==0:
+                    if len(res.worker_nodes)==0:
+                        res.flag=CloudResource.Drained
+                    else:
+                        res.flag=CloudResource.Draining
+                elif res.min_num==res.current_num and res.min_num==res.current_num:
+                    res.flag=CloudResource.Frozen
+            else:
+                res.flag=CloudResource.Normal
         return repr(engine.resources)
  
     @route('/resource/<res_name>', method="GET")
     def get_resource(res_name):
         global engine
-        res_list=[r for r in engine.resources if r.name==res_name]
-        for res in res_list:
+        try:
+            res=engine.get_resource_by_name(res_name)
             res.worker_nodes=[w for w in engine.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name]
-        return repr(res_list[0])
+            res_config=engine.config['cloud'][res.name]
+            if res.min_num!=res_config['quantity']['min'] and res.max_num!=res_config['quantity']['max']:
+                if res.min_num==res.current_num and res.min_num==res.current_num:
+                    res.flag=CloudResource.Frozen
+                elif res.min_num==0 and res.min_num==0:
+                    if len(res.worker_nodes)==0:
+                        res.flag=CloudResource.Drained
+                    else:
+                        res.flag=CloudResource.Draining
+            else:
+                res.flag=CloudResource.Normal
+            return repr(res)
+        except NoCloudResourceException:
+            return HTTPResponse(status=404, body="Cloud resource %s not found"%res)
+        return HTTPResponse(status=500, body="Unknown error")
    
     @route('/resource/<res>', method="PUT")
     def add_instace_to_res(res):
@@ -169,9 +200,26 @@ class AdminServer(threading.Thread):
         except NoCloudResourceException:
             return HTTPResponse(status=404, body="Cloud resource %s not found"%res)
         except InsufficientResourceException:
-            return HTTPResponse(status=400, body="You have requested %d worker node(s) in %s but it has exceeded the resource limit."%(num_string,res))
+            return HTTPResponse(status=400, body="You have requested %s worker node(s) in %s but it has exceeded the resource limit."%(num_string,res))
         return HTTPResponse(status=500, body="Unknown error")
     
+    @route('/resource/<res>/<action>', method="PUT")
+    def manipulate_resource(res, action):
+        global engine
+        log.debug("%s %s"%(action,res))
+        try:
+            if action=="freeze":
+                engine.freeze_resource(res)
+            elif action=="restore":
+                engine.restore_resource(res)
+            elif action=="drain":
+                engine.drain_resource(res)
+            else:
+                return HTTPResponse(status=404, body="action not supported")
+        except NoCloudResourceException:
+            return HTTPResponse(status=404, body="Cloud resource %s not found"%res)
+        return {"success":True}
+
     def __init__(self, dynaimc_engine=None, working_path=""):
         threading.Thread.__init__(self, name=self.__class__.__name__)
         global engine
