@@ -592,7 +592,7 @@ function showWNOverview() {
 	  $("#load1view").graphite({
 		  from: $("#from").val(),
 		  to: $("#to").val(),
-	    target: ["aliasByNode(stacked("+wn_prefix+"*.load.1min),0)"],
+	    target: ["aliasByNode(stacked("+wn_prefix+"*.load.1m),0)"],
 	    hideLegend: "false",
 	    lineWidth: "1",
 	    width: "600",
@@ -647,7 +647,7 @@ function showWNGraph(id) {
 		from: $("#from").val(),
 		to: $("#to").val(),
 		target: [
-		     "alias("+id+".load.1min,'"+id+" Load 1m')"
+		     "alias("+id+".load.1m,'"+id+" Load 1m')"
 		],
 		lineWidth: "1",
 		width: "400",
@@ -657,7 +657,7 @@ function showWNGraph(id) {
 	  from: $("#from").val(),
 	  to: $("#to").val(),
 	  target: [
-	         "alias("+id+".load.5min,'"+id+" Load 5m')"
+	         "alias("+id+".load.5m,'"+id+" Load 5m')"
 	  ],
 	  lineWidth: "1",
 	  width: "400",
@@ -667,7 +667,7 @@ function showWNGraph(id) {
 	  from: $("#from").val(),
 	  to: $("#to").val(),
 	  target: [
-	         "alias("+id+".load.15min,'"+id+" Load 15m')"
+	         "alias("+id+".load.15m,'"+id+" Load 15m')"
 	  ],
 	  lineWidth: "1",
 	  width: "400",
