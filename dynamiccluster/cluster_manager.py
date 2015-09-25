@@ -155,9 +155,9 @@ class TorqueManager(ClusterManager):
 
     def query_jobs(self):
         self.state["torque"], qstat_output=torque_utils.job_query(self.config['qstat_command'])
-        self.state["maui"], diag_p_output=torque_utils.job_query(self.config['diagnose_p_command'])
+        self.state["maui"], diag_p_output=torque_utils.get_job_priorities(self.config['diagnose_p_command'])
         if self.state["torque"]==False or self.state["maui"]==False:
-            return
+            return [], 0
         if len(qstat_output)==0:
             log.notice("There is no job in the queue.")
             return [], 0
