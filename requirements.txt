@@ -1,5 +1,3 @@
 PyYAML
-python-novaclient
 Jinja2
-boto
 requests
