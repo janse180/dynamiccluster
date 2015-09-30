@@ -585,18 +585,18 @@ function showWNOverview() {
 		$(this).removeClass('active');
 	});
 	$('#wngraphtab').addClass('active');
-	$("#graphmain").html('<div class="row"><div class="col-md-6"><img id="load1view" class="center-block"/></div>'+
-			'<div class="col-md-6"><img id="memview" class="center-block"/></div></div>'+
-			'<div class="row"><div class="col-md-6"><img id="netview" class="center-block"/></div>'+
-			'<div class="col-md-6"><img id="diskview" class="center-block"/></div></div>');
+	$("#graphmain").html('<div class="row"><div class="col-md-12"><img id="load1view" class="center-block"/></div></div>'+
+			'<div class="row"><div class="col-md-12"><img id="memview" class="center-block"/></div></div>'+
+			'<div class="row"><div class="col-md-12"><img id="netview" class="center-block"/></div></div>'+
+			'<div class="row"><div class="col-md-12"><img id="diskview" class="center-block"/></div></div>');
 	  $("#load1view").graphite({
 		  from: $("#from").val(),
 		  to: $("#to").val(),
 	    target: ["aliasByNode(stacked("+wn_prefix+"*.load.1m),0)"],
 	    hideLegend: "false",
 	    lineWidth: "1",
-	    width: "600",
-	    height: "400",
+	    width: "1000",
+	    height: "800",
 	    title: "Worker Nodes Load 1m"
 	  });
 	  $("#memview").graphite({
@@ -605,8 +605,8 @@ function showWNOverview() {
 	    target: ["aliasByNode(stacked("+wn_prefix+"*.memory.used),0)"],
 	    hideLegend: "false",
 	    lineWidth: "1",
-	    width: "600",
-	    height: "400",
+	    width: "1000",
+	    height: "8400",
 	    title: "Worker Nodes Memory Used"
 	  });
 	  $("#netview").graphite({
@@ -615,8 +615,8 @@ function showWNOverview() {
 	    target: ["aliasByNode(derivative("+wn_prefix+"*.interface.eth0.if_octets.{rx,tx}),0,4)"],
 	    hideLegend: "false",
 	    lineWidth: "1",
-	    width: "600",
-	    height: "400",
+	    width: "1000",
+	    height: "800",
 	    title: "Worker Nodes Network Performance"
 	  });
 	  $("#diskview").graphite({
@@ -625,10 +625,11 @@ function showWNOverview() {
 	    target: ["aliasByNode(derivative("+wn_prefix+"*.disk.*vda.disk_octets.{read,write}),0,3,4)"],
 	    hideLegend: "false",
 	    lineWidth: "1",
-	    width: "600",
-	    height: "400",
+	    width: "1000",
+	    height: "800",
 	    title: "Worker Nodes Disk Performance"
 	  });
+	  graph_list=["#load1view","#memview","#netview","#diskview"];
 }
 
 function showWNGraph(id) {
