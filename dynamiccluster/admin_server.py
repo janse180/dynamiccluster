@@ -118,7 +118,7 @@ class AdminServer(threading.Thread):
     @route('/server/config')
     def get_server_config():
         global engine
-        log.debug(engine.config)
+        #log.debug(engine.config)
         return engine.config
     
     @route('/server/status')

@@ -108,5 +108,11 @@ class CloudResource(EnumBase):
         else:
             self.reservation_account=None
     def __repr__(self):
-        return json.dumps(self, default=lambda o: o.__dict__)
-        
+        str = json.dumps(self, default=lambda o: o.__dict__)
+        data = json.loads(str)
+        if 'config' in data:
+            if 'password' in data['config']:
+                del data['config']['password']
+            elif 'secret_access_key' in data['config']:
+                del data['config']['secret_access_key']
+        return json.dumps(data)        

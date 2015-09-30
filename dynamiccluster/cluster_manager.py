@@ -366,6 +366,8 @@ class TorqueManager(ClusterManager):
             log.error("cannot see updated state of %s in maui, try again later" % wn.hostname)
             return False
         torque_utils.remove_node_from_torque(wn, self.config['remove_node_command'])
+        if "post_remove_node_command" in self.config:
+            run_post_command(worker_node, self.config["post_remove_node_command"])
         return True
     
     def hold_node(self, wn):
@@ -573,7 +575,13 @@ class SGEManager(ClusterManager):
         time.sleep(.5)
         sge_utils.unset_slots(wn, self.config['unset_slots_command'], reservation['queue'])
         time.sleep(.5)
-        return sge_utils.remove_node_from_sge(wn, self.config['remove_node_command'])
+        if sge_utils.remove_node_from_sge(wn, self.config['remove_node_command']):
+            if "post_remove_node_command" in self.config:
+                run_post_command(worker_node, self.config["post_remove_node_command"])
+            return True
+        else:
+            return False
+
 
     def vacate_node(self, wn):
         if wn.jobs is None:

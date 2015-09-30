@@ -93,11 +93,11 @@ cluster:
     # the command to send a signal to a job
     signal_job_command: /usr/bin/qsig -s {0} {1}
       
-    # a script to be executed after adding a node to Torque (just before setting it to online) 
+    # a script to be executed after adding a node to the cluster
     #  it takes two parameters which are the hostname of the VM and the IP of the VM
     #post_add_node_command: /the/path/some.sh {0} {1}
     
-    # a script to be executed after removing a node from Torque (after it is destroyed from the cloud)
+    # a script to be executed after removing a node from the cluster
     #  it takes two parameters which are the hostname of the VM and the IP of the VM
     #post_remove_node_command: /the/path/some.sh {0} {1}
 
