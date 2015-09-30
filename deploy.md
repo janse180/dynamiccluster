@@ -76,10 +76,11 @@ Use yum to install it and yum will sort out the dependencies, e.g.
 
 # Configuration
 
-The configuration file include four sections.
+The configuration file include four sections. An example can be found [here](https://github.com/eResearchSA/citc/blob/master/all-in-one/srv/salt/dynamiccluster/dynamiccluster.yaml).
 
-## General dynamic cluster parameters
+## General dynamic cluster variables
 
+This section includes variables for dynamic cluster itself.
 
 Max idle time (in seconds) is the amount of time a worker node can be idle for before it will be deleted. The default value is 600.
     
@@ -107,11 +108,11 @@ Auto provision interval (in secondes) is the time interval that Dynamic Cluster 
     
     auto_provision_interval: 60
     
-number of workers
+Number of workers. Dynamic Cluster spawns multiple processes to communicate with cloud systems.
     
     worker_number: 2
     
-auto mode, dynamic cluster works out which one to kill and how many to fire up according to work load
+Automatic mode. Dynamic cluster works out for you which worker node to kill and how many to fire up according to work load. Setting it to False turns it into a static cluster, but the admin can still add or remove worker nodes manually.
     
     auto_mode: True
     
@@ -133,192 +134,356 @@ Salt checker uses salt client to check an instance's highstate.
       plugin:
         name: dynamiccluster.salt.SaltChecker
         
-a script to be executed after cloud provisioning is finished (VM state in the cloud becomes ACTIVE) 
-it takes two parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
+A script can be executed after cloud provisioning is finished (VM state in the cloud becomes ACTIVE in OpenStack or Running in AWS) 
+It takes three parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque.
+This is optional.
     
-    #post_vm_provision_command: /the/path/some.sh {0} {1} {2}
+    post_vm_provision_command: /the/path/some.sh {0} {1} {2}
     
-a script to be executed after a VM is destroyed from the cloud
-it takes two parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
+A script can be executed after a VM is destroyed from the cloud.
+It takes three parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
+This is optional.
 
-    #post_vm_destroy_command: /the/path/some.sh {0} {1} {2}
+    post_vm_destroy_command: /the/path/some.sh {0} {1} {2}
 
 
-## cluster
+## Cluster specific variables
 
-  type: torque
-  config:
+Dynamic cluster supports Torque and SGE. _type_ defines which one to use.
+
+    cluster:
+      type: torque
+      config:
+        ...
+
+Or
+
+    cluster:
+      type: sge
+      config:
+        ...
+
+Several variables in config are common:
+
+A list of queues that dynamic cluster cares about.
+
     queue_to_monitor: 
       - short
       - long
-    # the number of queued jobs to keep in memory for display
+
+The number of queued jobs to keep in memory for display. Because a queue can have thousands of jobs pending, we only display a certain number.
+
     queued_job_number_to_display: 30
-    # the command to query jobs in the queue
-    #  it must return data in XML format (-x)
+
+A script can be executed after adding a node to the cluster.
+It takes two parameters which are the hostname of the VM and the IP of the VM
+This is optional.
+
+    post_add_node_command: /the/path/some.sh {0} {1}
+    
+A script can be executed after removing a node from the cluster.
+It takes two parameters which are the hostname of the VM and the IP of the VM
+This is optional.
+
+    post_remove_node_command: /the/path/some.sh {0} {1}
+
+Variables related to cluster commands are cluster specific. They can stay as it is because they are used by the code. The admin just needs adjust the path accordingly.
+
+### Torque variables
+
+The command to query jobs in the queue. it must return data in XML format (-x).
+
     qstat_command: /usr/bin/qstat -x -t
     
-    # the command to run pbsnodes command with differnt options
-    #  it takes two parameters, the option and the hostname of the VM
-    #    -x query node's details
-    #    -o hold node (set it to offline)
-    #    -c release node (clear OFFLINE)
-    #  it must return data in XML format (-x)
-    pbsnodes_command: /usr/bin/pbsnodes {0} {1}
+The command to run pbsnodes command with different options. It must return data in XML format (-x).
+It takes two parameters, the option and the hostname of the VM:
+
+* -x query node's details
+* -o hold node (set it to offline)
+* -c release node (clear OFFLINE)
     
-    # the command to add a new node to torque
-    #  it takes one parameter which is the hostname of the VM
+<pre><code>pbsnodes_command: /usr/bin/pbsnodes {0} {1}</code></pre>
+    
+The command to add a new node to torque. It takes one parameter which is the hostname of the VM.
+
     add_node_command: /usr/bin/qmgr -c "create node {0}"
     
-    # the command to check node state in maui
-    #  it takes one parameter which is the hostname of the VM
+The command to check node state in maui. It takes one parameter which is the hostname of the VM.
+
     check_node_command: /usr/bin/checknode {0}
     
-    # the command to delete node from torque
-    #  it takes one parameter which is the hostname of the VM
+The command to delete node from torque. It takes one parameter which is the hostname of the VM.
+
     remove_node_command: /usr/bin/qmgr -c "delete node {0}"
     
-    # the command to set a property to node in torque
-    #  it takes three parameters {0} is the hostname of the VM, {1} is the name of the property, {2} is the value of the property
+The command to set a property to node in torque. It takes three parameters: {0} is the hostname of the VM, {1} is the name of the property, {2} is the value of the property.
+
     set_node_command: /usr/bin/qmgr -c "set node {0} {1} {2} {3}"
     
-    # the command to get jobs' priorities
+The command to get jobs' priorities.
+
     diagnose_p_command: /usr/bin/diagnose -p
     
-    # the command to show reservations of a node
+The command to show reservations of a node.
+
     showres_command: /usr/bin/showres -n | grep {0}
 
-    # the command to set account_string to a node
+The command to set account_string to a node.
+
     setres_command: /usr/bin/setres {0} {1} {2}
     
-    # the command to unset account_string in a node
+The command to unset account_string in a node.
+
     releaseres_command: /usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | grep {1} | awk '{{print $3}}' `
 
-    # the command to delete a job
+The command to delete a job.
+
     delete_job_command: /usr/bin/qdel -p {0}
 
-    # the command to send a signal to a job
+The command to send a signal to a job.
+
     signal_job_command: /usr/bin/qsig -s {0} {1}
       
-    # a script to be executed after adding a node to Torque (just before setting it to online) 
-    #  it takes two parameters which are the hostname of the VM and the IP of the VM
-    #post_add_node_command: /the/path/some.sh {0} {1}
-    
-    # a script to be executed after removing a node from Torque (after it is destroyed from the cloud)
-    #  it takes two parameters which are the hostname of the VM and the IP of the VM
-    #post_remove_node_command: /the/path/some.sh {0} {1}
 
-## cluster
+### SGE variables
 
-  type: sge
-  config:
-    queue_to_monitor: 
-      - short
-      - long
-    # the number of queued jobs to keep in memory for display
-    queued_job_number_to_display: 30
-    # the command to query jobs in the queue
-    #  it must return data in XML format (-xml)
+The command to query jobs in the queue. It must return data in XML format (-xml)
+
     qstat_command: /opt/sge/bin/lx-amd64/qstat -xml -r
     
-    # the command to run qhost command with differnt options
-    #  it takes two parameters to query only one host, "-h hostname"
+The command to run qhost command with differnt options. The two parameters are "-h hostname", if present it will query only one host.
+
     qhost_command: /opt/sge/bin/lx-amd64/qhost -q -j -xml {0} {1}
     
-    # the command to modify hostgroup in sge, used when adding or removing a node
-    #  it takes three parameters which are -aattr/-dattr, the hostname of the VM and the group name
+The command to modify hostgroup in sge, used when adding or removing a node.
+It takes three parameters which are -aattr/-dattr, the hostname of the VM and the group name
+
     hostgroup_command: /opt/sge/bin/lx-amd64/qconf {0} hostgroup hostlist {1} {2}
     
-    # the command to enable/disable all queue in a node
-    #  it takes two parameters which are -e(enable)/-d(disable) and the hostname of the VM
+The command to enable/disable all queue in a node. 
+It takes two parameters which are -e(enable)/-d(disable) and the hostname of the VM
+
     qmod_command: /opt/sge/bin/lx-amd64/qmod {0} *@{1}
     
-    # the command to delete node from torque
-    #  it takes one parameter which is the hostname of the VM
+The command to delete node from torque.
+It takes one parameter which is the hostname of the VM
+
     remove_node_command: /opt/sge/bin/lx-amd64/qconf -de {0}
     
-    # the command to set slots in a queue for a node
-    #  it takes one parameter which are the number of slots, queue name and the hostname of the VM
+The command to set slots in a queue for a node.
+It takes one parameter which are the number of slots, queue name and the hostname of the VM
+
     set_slots_command: /opt/sge/bin/lx-amd64/qconf -rattr queue slots {0} {1}@{2}
     
-    # the command to unset slots in a queue for a node before removing this node
-    #  it takes one parameter which are queue name and the hostname of the VM
+The command to unset slots in a queue for a node before removing this node.
+It takes one parameter which are queue name and the hostname of the VM
+
     unset_slots_command: /opt/sge/bin/lx-amd64/qconf -purge queue slots {0}@{1}
     
-    # the command to run qconf -spl command
+The command to run qconf -spl command
+
     qconf_spl_command: /opt/sge/bin/lx-amd64/qconf -spl
 
-    # the command to run qconf -sp command to get allocation rule
+The command to run qconf -sp command to get allocation rule
+
     qconf_sp_command: /opt/sge/bin/lx-amd64/qconf -sp {0} | grep allocation_rule | awk '{{print $2}}'
 
-    # the command to run qdel -f command to force deletion of a dead job
+The command to run qdel -f command to force deletion of a dead job
+
     qdel_command: /opt/sge/bin/lx-amd64/qdel -f {0}
     
-## cloud
+## Cloud variables
 
-  os-res:
-    type: openstack
-    reservation:
-      queue:
-      account:
-      property:
-    quantity:
-      min:
-      max:
-    priority:
-    config:
+The cloud section specifies cloud resources. Each resource can be an openstack resource or an AWS resource, which is set in _type_. They have some variables in common.
+
+Reservation speficies the limitation when a resource is added. The limitation can restrict the resource to a queue, an account string, or a property.
+
+For Torque:
+
+* queue reservation is achieved by using maui's "setres -q" command, which reserves the worker node for a particular queue.
+* account reservation is achieved by using maui's "setres -a" command, which reserves the worker node for an account string. To use this worker node, the user needs to add "-A" to qsub command.
+* property reservation is achieved by setting a property to the worker node in Torque.
+
+For SGE:
+
+* queue reservation is achieved by adding the node to slots of a queue.
+* account reservation is achieved by adding the node to a hostgroup.
+* property reservation is not used.
+
+When a job is submitted to the queue, Dynamic Cluster matches job requirements with resource reservation to find a suitable resource. Then a worker node will be launched using this resource.
+
+Quantity defines the minimum number and maximum number of worker nodes in this resource.
+
+Priority sets the priority of the resource, lower number goes first. If multiple resources are suitable for a job, the highest priority one will be chosen. If they have the same priority, the one with less worker nodes will be chosen.
+
+
+    resource-name:
+      type: openstack/aws
+      reservation:
+        queue:
+        account:
+        property:
+      quantity:
+        min:
+        max:
+      priority:
+      config:
+        ...
+        
+
+### OpenStack specific variables
+
+Dynamic cluster uses Nova API to talk to OpenStack.
+
+Username of user's openstack account
+  
       username:
+
+Password of user's openstack account
+
       password:
+
+Project (or tenant) of user's openstack account
+
       project:
+
+Image UUID
+
       image_uuid:
+
+Flavor of worker node, e.g. m1.small
+
       flavor:
+
+OpenStack's auth URL (Keystone URL)
+
       auth_url:
+
+SSH key name
+
       key_name:
+
+Security groups, in list
+
       security_groups:
+
+Avaiablility zone, if multi-zones are available, each zone is one resource.
+
       availability_zone:
+
+Prefix of instance name, this is used to get all instances for the resource. Please use a different name for each resource.
+
       instance_name_prefix:
+
+User-data script file
+
       userdata_file:
-  aws-res:
-    type: aws
-    reservation:
-      queue:
-      account:
-      property:
-    quantity:
-      min:
-      max:
-    priority:
-    config:
-      access_key_id:
-      secret_access_key:
-      image_id:
-      instance_type:
-      region_name: ap-southeast-2
-      key_name:
-      security_groups:
-      availability_zone:
-      subnet_id:
-      use_public_ip_address:
-      instance_name_prefix:
-      userdata_file:
-      validate_certs: False
-      spot_bid:
-      spot_timeout:
-      #proxy:
-      #proxy_port:
       
-## plugins
+### AWS specific variables
+ 
+Dynamic Cluster uses boto to talk to AWS.
 
-  graphite:
-    class_name: dynamiccluster.graphite.GraphiteReporter
-    arguments:
-      hostname: localhost
-      port: 2003
-      prefix: headnode.dynamiccluster
+Access key ID of user's AWS account
 
-## logging
+      access_key_id:
 
-    log_level: 3
+Secret access key of user's AWS account
+
+      secret_access_key:
+
+Image ID
+
+      image_id:
+
+Instance type
+
+      instance_type:
+
+Region name
+
+      region_name: 
+
+SSH key name
+
+      key_name:
+
+Security groups, must use ID if subnet_id is used
+
+      security_groups:
+
+Availability zone
+
+      availability_zone:
+
+Subnet ID
+
+      subnet_id:
+
+Boolean variable, specifies whether assigns a public IP to the instance
+
+      use_public_ip_address:
+
+Prefix of instance name
+
+      instance_name_prefix:
+
+User-data script file
+
+      userdata_file:
+
+Spot price
+
+      spot_bid:
+
+Timeout of Spot price
+
+      spot_timeout:
+
+HTTP proxy hostname (optional)
+
+      proxy:
+
+HTTP proxy port (optional)
+
+      proxy_port:
+      
+## Plugin section
+
+Dynamic cluster supports plugins. A plugin runs as a thread in main process.
+
+Currently there is only one plugin.
+
+The graphite plugin sends the number of worker nodes and cores to graphite every minute.
+
+    graphite:
+      class_name: dynamiccluster.graphite.GraphiteReporter
+      arguments:
+        hostname: localhost
+        port: 2003
+        prefix: headnode.dynamiccluster
+
+## Logging section
+
+Dynamic cluster uses python's built-in logging module for logs.
+
+Log level.
+
+* 0 ERROR
+* 1 WARNING
+* 2 INFO
+* 3 DEBUG
+
+<pre><code>log_level: 3</code></pre>
+    
+Path of log file
+    
     log_location: /tmp/dynamiccluster.log
+    
+Log format
+    
     log_format: "%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s"
+    
+Maximum size of log file, it will rotate if exceeds and keep recent 3 rotated logs.
+    
     log_max_size: 2097152
 
