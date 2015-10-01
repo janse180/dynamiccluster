@@ -5,6 +5,7 @@ from dynamiccluster.utilities import getLogger, get_prefix
 from dynamiccluster.exceptions import *
 from dynamiccluster.data import CloudResource
 import os
+import copy
 
 log = getLogger(__name__)
 engine = None
@@ -118,9 +119,15 @@ class AdminServer(threading.Thread):
     @route('/server/config')
     def get_server_config():
         global engine
-        #log.debug(engine.config)
-        return engine.config
-    
+        config=copy.deepcopy(engine.config)
+        if 'cloud' in config:
+            for res_name, res_config in config['cloud'].iteritems():
+                if 'password' in res_config['config']:
+                    del res_config['config']['password']
+                elif 'secret_access_key' in res_config['config']:
+                    del res_config['config']['secret_access_key']
+        return config
+        
     @route('/server/status')
     def get_server_status():
         global engine
