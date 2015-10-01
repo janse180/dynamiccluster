@@ -155,6 +155,97 @@ Returns a job specified by id. Its response is one item in the above list.
 
 Returns server config. This is the json version of the YAML config file.
 
+#### example response
+
+	{
+	    "cloud": {
+	        "os-res": {
+	            "config": {
+	                "auth_url": "https://keystone.rc.nectar.org.au:5000/v2.0/",
+	                "availability_zone": "sa",
+	                "flavor": "m1.small",
+	                "flavor_id": "0",
+	                "image_uuid": "1b66d8cd-7d10-413a-ae06-3b61560e788a",
+	                "instance_name_prefix": "dynamicwn",
+	                "key_name": "ersakey",
+	                "project": "blah",
+	                "security_groups": [
+	                    "dc-dynamic_cluster_wn-vgg7h5udejdb"
+	                ],
+	                "userdata_file": "/etc/dynamiccluster/userdata_salt.sh",
+	                "username": "blah"
+	            },
+	            "priority": 1,
+	            "quantity": {
+	                "max": 3,
+	                "min": 1
+	            },
+	            "reservation": {
+	                "account": null,
+	                "property": null,
+	                "queue": null
+	            },
+	            "type": "openstack"
+	        }
+	    },
+	    "cluster": {
+	        "config": {
+	            "add_node_command": "/usr/bin/qmgr -c \"create node {0}\"",
+	            "check_node_command": "/usr/bin/checknode {0}",
+	            "delete_job_command": "/usr/bin/qdel -p {0}",
+	            "diagnose_p_command": "/usr/bin/diagnose -p",
+	            "pbsnodes_command": "/usr/bin/pbsnodes {0} {1}",
+	            "qstat_command": "/usr/bin/qstat -x -t",
+	            "queue_to_monitor": [
+	                "default"
+	            ],
+	            "queued_job_number_to_display": 30,
+	            "releaseres_command": "/usr/bin/releaseres `/usr/bin/showres -n | grep User | grep {0} | grep {1} | awk '{{print $3}}' `",
+	            "remove_node_command": "/usr/bin/qmgr -c \"delete node {0}\"",
+	            "set_node_command": "/usr/bin/qmgr -c \"set node {0} {1} {2} {3}\"",
+	            "setres_command": "/usr/bin/setres {0} {1} {2}",
+	            "showres_command": "/usr/bin/showres -n | grep {0}",
+	            "signal_job_command": "/usr/bin/qsig -s {0} {1}"
+	        },
+	        "type": "torque"
+	    },
+	    "dynamic-cluster": {
+	        "admin-server": {
+	            "port": 8001
+	        },
+	        "auto_mode": true,
+	        "cloud_poller_interval": 20,
+	        "cluster_poller_interval": 10,
+	        "config-checker": {
+	            "plugin": {
+	                "name": "dynamiccluster.saltclient.SaltChecker"
+	            }
+	        },
+	        "max_down_time": 480,
+	        "max_idle_time": 600,
+	        "max_launch_time": 1200,
+	        "post_vm_destroy_command": "/etc/dynamiccluster/wn.sh -d {0} {1} {2}",
+	        "post_vm_provision_command": "/etc/dynamiccluster/wn.sh -a {0} {1} {2}",
+	        "worker_number": 2
+	    },
+	    "logging": {
+	        "log_format": "%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s",
+	        "log_level": 3,
+	        "log_location": "/var/log/dynamiccluster/dynamiccluster.log",
+	        "log_max_size": 2097152
+	    },
+	    "plugins": {
+	        "graphite": {
+	            "arguments": {
+	                "hostname": "localhost",
+	                "port": 2003,
+	                "prefix": "headnode.dynamiccluster"
+	            },
+	            "class_name": "dynamiccluster.graphite.GraphiteReporter"
+	        }
+	    }
+	}
+
 ### GET /server/status
 
 Returns server status.
