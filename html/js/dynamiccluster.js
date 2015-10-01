@@ -378,6 +378,7 @@ $('#modifyResDialog').on('show.bs.modal', function (event) {
 	var action = button.data('action');
 	console.log(action);
 	if (action=="freeze"||action=="drain"||action=="restore"){
+		$("#modifyResModalLabel").html("Resource manipulation:");
 		$("#modifyResModalMain").html("Do you want to "+action+" resource <span id='dialog_res_name'>"+res_name+"</span>?");
 		$('#modifyResDialog').find('.modal-footer .btn-primary').prop('disabled', false);
 		$('#modifyResDialog').find('.modal-footer input:hidden').val(action);
@@ -386,6 +387,7 @@ $('#modifyResDialog').on('show.bs.modal', function (event) {
 		    selected.push($(this).val());
 		});
 		if (selected.length==0) {
+			$("#modifyResModalLabel").html("Selected Worker Nodes:");
 			$("#modifyResModalMain").html("Please select worker nodes.");
 			$('#modifyResDialog').find('.modal-footer .btn-primary').prop('disabled', true);
 		} else {
