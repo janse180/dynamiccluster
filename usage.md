@@ -39,7 +39,7 @@ Jobs view shows pending jobs. The number of jobs is defined in config, cluster -
 
 This is the most important view where you can manipulate your resources. Other views are mostly informative.
 
-<img src="./images/res.png" alt="Jobs view" width="1100" height="600" />
+<img src="./images/res.png" alt="Resource view" width="1100" height="600" />
 
 Each resource is in a box that can collapse.
 
@@ -70,11 +70,11 @@ It has a toolbar which can select the start time and end time to render the char
 
 On the left there is a menu that can switch from Dynamic Cluster view to worker nodes overview, and individual worker node's view.
 
-<img src="./images/graph-dc.png" alt="Jobs view" width="1100" height="700" />
+<img src="./images/graph-dc.png" alt="Graph view - Dynamic Cluster" width="1100" height="700" />
 
 The Dynamic Cluster view shows the usage of Dynamic Cluster, including the total number of worker nodes and the total number of cores, as well as the number by resources.
 
-<img src="./images/graph-wns.png" alt="Jobs view" width="1100" height="700" />
+<img src="./images/graph-wns.png" alt="Graph view - Worker nodes" width="1100" height="700" />
 
 The Worker nodes overview shows the aggregation view of all worker nodes. It has four charts:
 
@@ -83,7 +83,7 @@ The Worker nodes overview shows the aggregation view of all worker nodes. It has
 * network rx/tx
 * vda read/write
 
-<img src="./images/graph-wn.png" alt="Jobs view" width="1100" height="700" />
+<img src="./images/graph-wn.png" alt="Graph view - individual worker node" width="1100" height="700" />
 
 Individual worker node view shows more details:
 
@@ -97,6 +97,6 @@ Individual worker node view shows more details:
 
 Setting view shows the status of Dynamic cluster and its config file.
 
-<img src="./images/setting.png" alt="Jobs view" width="1100" height="600" />
+<img src="./images/setting.png" alt="Setting view" width="1100" height="600" />
 
 You can set/unset automatic mode here and see the status of local cluster (torque/maui or SGE).
