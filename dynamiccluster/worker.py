@@ -86,10 +86,12 @@ class Worker(multiprocessing.Process):
                         break
                 except Empty:
                     log.notice("got nothing from task queue")
-                    pass
+                    if self.__task_queue.qsize()>0:
+                        log.error("task queue size %d but got nothing from task queue"%self.__task_queue.qsize())
                 except IOError, e:            
                     if e.errno == errno.EINTR:
                         break
+                    log.exception("IO ERROR")
                 except Exception as e:
                     log.exception("task (%s) cannot be executed." % task)
                     self.__result_queue.put(Result(task.type, Result.Failed, task.data))

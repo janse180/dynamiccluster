@@ -97,6 +97,8 @@ class DynamicServer(Daemon):
         for plugin_obj in self.__plugin_objects:
             plugin_obj.join()
         self.engine.join()
+        self.task_queue.close()
+        self.result_queue.close()
         log.info("Dynamic Cluster has stopped")
              
     def quit(self):
