@@ -27,7 +27,7 @@ The admin server is a lightweight HTTP server [bottlepy](http://bottlepy.org/doc
 
 ## States
 
-Each *worker node* in Dynamic Cluster has seven states:
+Each *worker node* in Dynamic Cluster has eight states:
 
 * Inexistent: the worker node doesn't exist, it is either the beginning of the life cycle or a worker node or the end of it. 
 * Starting: the worker node is starting, including the cloud starting the instance and contextualisation after startup. 
@@ -40,3 +40,4 @@ Each *worker node* in Dynamic Cluster has seven states:
 
 The states are the key of the system. They provide a generic mapping to different clusters, and the interaction with the cluster and the cloud are based on the transition of states.
 
+<img src="./images/states.png" alt="States"  />
