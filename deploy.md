@@ -21,10 +21,10 @@ and then
 	pip install python-novaclient
 
 
-Note: pip 7.1 seems not compatible with novaclient. But pip 1.3 works fine though. python-pip in epel is 7.1, if you want to use pip 1.3, you need to use easy_install to get it.
+Note: pip 7.1 seems not compatible with novaclient. But pip 1.5.4 works fine though. python-pip in EPEL is 7.1, if you want to use pip 1.5.4, you need to use easy_install to get it.
 
 
-	easy_install pip==1.3.0
+	easy_install pip==1.5.4
 
 
 
@@ -58,7 +58,7 @@ Copy init.d script from /opt/dynamiccluster/scripts/ to /etc/init.d
 
 	cp /opt/dynamiccluster/scripts/initd-script /etc/init.d/dynamiccluster
 
-Create your config file. An example is in /opt/dynamiccluster/config/dynamiccluster.yaml
+Create your config file /etc/dynamiccluster/dynamiccluster.yaml. An example is /opt/dynamiccluster/config/dynamiccluster.yaml
 
 For details on how to change this configuration file, please see [Configuration](#configuration) below.
 
@@ -104,7 +104,7 @@ Cloud poller interval (in seconds) is the time interval that Dynamic Cluster que
     
     cloud_poller_interval: 20
     
-Auto provision interval (in secondes) is the time interval that Dynamic Cluster checks queueing jobs to see if new worker nodes are needed. The default value is 60.
+Auto provision interval (in seconds) is the time interval that Dynamic Cluster checks queueing jobs to see if new worker nodes are needed. The default value is 60.
     
     auto_provision_interval: 60
     
@@ -112,11 +112,11 @@ Number of workers. Dynamic Cluster spawns multiple processes to communicate with
     
     worker_number: 2
     
-Automatic mode. Dynamic cluster works out for you which worker node to kill and how many to fire up according to work load. Setting it to False turns it into a static cluster, but the admin can still add or remove worker nodes manually.
+Automatic mode. Dynamic cluster works out for you which worker node to kill and how many to fire up according to work load. Setting it to False will turn it into a static cluster, but the admin can still add or remove worker nodes manually.
     
     auto_mode: True
     
-The port number of the built-in admin server, which serves a Restful API and a web-based dashboard.
+The port number of the built-in admin server, which serves the Restful API and a web-based dashboard.
 
     admin-server:
       port: 8001
@@ -141,7 +141,7 @@ This is optional.
     post_vm_provision_command: /the/path/some.sh {0} {1} {2}
     
 A script can be executed after a VM is destroyed from the cloud.
-It takes three parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
+It takes three parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque.
 This is optional.
 
     post_vm_destroy_command: /the/path/some.sh {0} {1} {2}
@@ -149,7 +149,7 @@ This is optional.
 
 ## Cluster specific variables
 
-Dynamic cluster supports Torque and SGE. _type_ defines which one to use.
+Dynamic cluster supports Torque and SGE. _type_ defines which cluster to use.
 
     cluster:
       type: torque
@@ -171,18 +171,18 @@ A list of queues that dynamic cluster cares about.
       - short
       - long
 
-The number of queued jobs to keep in memory for display. Because a queue can have thousands of jobs pending, we only display a certain number.
+The number of queued jobs to keep in memory for display. Because a queue can have thousands of pending jobs, we only display a certain number.
 
     queued_job_number_to_display: 30
 
 A script can be executed after adding a node to the cluster.
-It takes two parameters which are the hostname of the VM and the IP of the VM
+It takes two parameters which are the hostname of the VM and the IP of the VM.
 This is optional.
 
     post_add_node_command: /the/path/some.sh {0} {1}
     
 A script can be executed after removing a node from the cluster.
-It takes two parameters which are the hostname of the VM and the IP of the VM
+It takes two parameters which are the hostname of the VM and the IP of the VM.
 This is optional.
 
     post_remove_node_command: /the/path/some.sh {0} {1}
@@ -314,7 +314,7 @@ When a job is submitted to the queue, Dynamic Cluster matches job requirements w
 
 Quantity defines the minimum number and maximum number of worker nodes in this resource.
 
-Priority sets the priority of the resource, lower number goes first. If multiple resources are suitable for a job, the highest priority one will be chosen. If they have the same priority, the one with less worker nodes will be chosen.
+Priority sets the priority of the resource, lower number means higher priority. If multiple resources are suitable for a job, the highest priority one will be chosen. If they have the same priority, the one with less worker nodes will be chosen.
 
 
     resource-name:
@@ -449,7 +449,7 @@ HTTP proxy port (optional)
       
 ## Plugin section
 
-Dynamic cluster supports plugins. A plugin runs as a thread in main process.
+Dynamic cluster supports plugins. A plugin runs as a thread in the main process.
 
 Currently there is only one plugin.
 

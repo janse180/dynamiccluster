@@ -25,7 +25,7 @@ More will be added in future releases.
 
 
 Dynamic Cluster runs independent of the cluster and the cloud. It doesn't store any states in any database.
-All states are from the cluster or the cloud. It works according to these states.
+All states are from the cluster and the cloud. It works according to these states.
 Even when Dynamic Cluster is not running, the normal operation of the cluster or the cloud is not affected.
 You just lose the ability to automatically grow and shrink your cluster.
 
@@ -50,8 +50,4 @@ Dynamic Cluster is designed to be simple and flexible. It can be configured in m
 The sysadmin should choose the right components and apply the right policies to your cluster.
 
 
-This project is purely about Dynamic Cluster. For an example of how it works in a test environment, please see the all in one system in [citc](http://eresearchsa.github.io/citc/).
-
-
-
-
+This project is purely about Dynamic Cluster. The [Cluster in the Cloud](http://eresearchsa.github.io/citc/) project presents some examples on how it works in a test environment or a production environment.

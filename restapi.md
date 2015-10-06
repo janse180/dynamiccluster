@@ -7,7 +7,7 @@ permalink: /restapi.html
 
 # Restful API
 
-The restful API is the main approach to manipulate Dynamic Cluster. It doesn't have any authentication so you can place it behind Apache or Nginx to protect it. An example can be found [here](https://github.com/eResearchSA/citc/blob/master/all-in-one/srv/salt/httpd/ssl.conf).
+The Restful API is the main approach to manipulate Dynamic Cluster. It doesn't have any authentication so you can place it behind Apache or Nginx to protect it. An example can be found [here](https://github.com/eResearchSA/citc/blob/master/all-in-one/srv/salt/httpd/ssl.conf).
 
 All responses are in JSON format.
 
@@ -84,7 +84,7 @@ Manipulate a worker node specified by hostname. Action can be one of *hold*, *un
 
 * hold: disable the worker node. If it has running jobs they will continue to run, but the worker node will not accept new jobs.
 * unhold: enable the worker node. Set it back to normal.
-* vacate: force deletion of all running jobs. You may want to hold it first otherwise new jobs will be scheduled on it onnce existing jobs are deleted.
+* vacate: force deletion of all running jobs. You may want to hold it first otherwise new jobs will be scheduled on it once existing jobs are deleted.
 
 #### Example response
 
@@ -111,7 +111,7 @@ Delete a worker node specified by hostname.
 #### Error code
 
 * 404 if the hostname is not found.
-* 400 if the action is not allowed in the current state. A worker node can only be deleted when it is in *Held* state and has no running jobs.
+* 400 if the action is not allowed in the current state. A worker node can only be deleted when it is in *Held* state and has no running jobs, or in *Starting* or *Error*.
 * 500 for other errors.
 
 ### GET /job
