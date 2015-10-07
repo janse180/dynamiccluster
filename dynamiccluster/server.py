@@ -361,8 +361,7 @@ class DynamicEngine(threading.Thread):
             log.debug("instance %s is gone, remove it"%worker_node.hostname)
             self.__cluster.remove_node(worker_node, self.config['cloud'][worker_node.instance.cloud_resource]['reservation'])
             self.info.worker_nodes.remove(worker_node)
-            if "post_vm_destroy_command" in self.config['dynamic-cluster']:
-                run_post_command(worker_node, self.config['dynamic-cluster']["post_vm_destroy_command"])
+            self.run_post_vm_destroy_command(worker_node)
 #         elif worker_node.instance.state==Instance.Active or worker_node.instance.state==Instance.Ready:
 #             ### Not sure about this, maybe it should rescue the worker node???
 #             log.debug("instance %s is OK, check config status"%worker_node.hostname)
@@ -384,8 +383,7 @@ class DynamicEngine(threading.Thread):
         if worker_node.instance.state==Instance.Inexistent:
             log.debug("instance %s is gone, remove it"%worker_node.hostname)
             self.info.worker_nodes.remove(worker_node)
-            if "post_vm_destroy_command" in self.config['dynamic-cluster']:
-                run_post_command(worker_node, self.config['dynamic-cluster']["post_vm_destroy_command"])
+            self.run_post_vm_destroy_command(worker_node)
         elif worker_node.instance.state!=Instance.Deleting:
             log.debug("worker node %s is not deleting, delete it again." % worker_node.hostname)
             self.new_task(worker_node, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))
@@ -570,7 +568,7 @@ class DynamicEngine(threading.Thread):
             if worker_node.state in [WorkerNode.Idle, WorkerNode.Busy]:
                 self.transit(worker_node, WorkerNode.Holding, None)
                 self.__cluster.hold_node(worker_node)
-            elif state==WorkerNode.Inexistent or (worker_node.jobs is not None and len(worker_node.jobs)>0):
+            elif worker_node.state==WorkerNode.Inexistent or (worker_node.jobs is not None and len(worker_node.jobs)>0):
                 continue
             else:
                 self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": resource, "instance": worker_node.instance}))
