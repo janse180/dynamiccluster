@@ -7,7 +7,7 @@ permalink: /usage.html
 
 # Usage
 
-Users (admins) interactive with Dynamic Cluster via its Restful interface.
+Users (admins) interact with Dynamic Cluster via its Restful interface.
 
 To make things easier, a web-based dashboard is provided. A CLI may be available in future releases.
 
