@@ -52,7 +52,7 @@ fi
 echo "If you want to use OpenStack as your cloud resoource, please install python-novaclient."
 echo "    e.g. pip install python-novaclient"
 echo "If you want to use AWS as your cloud resoource, please install boto."
-echo "    e.g. pip install boto:
+echo "    e.g. pip install boto"
 echo "(You may need to install gcc-c++ and python-devel with yum before installing any of the above libs)"
 
 %preun
