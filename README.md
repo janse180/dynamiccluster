@@ -1,13 +1,7 @@
-dynamiccluster
+Dynamic Cluster
 ==============
 
-Dynamic Cluster
+Dynamic Cluster is a service running next to your cluster and monitoring its workload, based on which Dynamic Cluster automatically starts up and shuts down worker nodes in the cloud.
 
-Installation
-===========
-
-```
-yum install -y python-pip gcc-c++ python-devel git
-pip install -r requirements.txt
-```
+For documents please go to http://eresearchsa.github.io/dynamiccluster/
 
