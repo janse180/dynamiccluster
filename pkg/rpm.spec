@@ -1,5 +1,5 @@
 Name: dynamiccluster
-Version: 0.5.0
+Version: %{?version}
 Release: %{?buildid}%{?dist}
 Summary: A cluster in the cloud solution
 Group:   System Environment/Daemons
