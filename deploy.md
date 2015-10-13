@@ -21,10 +21,10 @@ and then
 	pip install python-novaclient
 
 
-Note: pip 7.1 seems not compatible with novaclient. But pip 1.5.4 works fine though. python-pip in EPEL is 7.1, if you want to use pip 1.5.4, you need to use easy_install to get it.
+Note: pip 7.1 seems not compatible with novaclient. But pip 1.3.0 works fine though. python-pip in EPEL is 7.1, if you want to use pip 1.3.0, you need to use easy_install to get it.
 
 
-	easy_install pip==1.5.4
+	easy_install pip==1.3.0
 
 
 
@@ -71,7 +71,7 @@ RPMs can be found in [CITC](https://github.com/eResearchSA/citc/tree/master/rpms
 Use yum to install it and yum will sort out the dependencies, e.g.
 
 
-	yum localinstall -y https://github.com/eResearchSA/citc/raw/master/rpms/dynamiccluster-0.5.0-1.el6.noarch.rpm
+	yum localinstall -y https://github.com/eResearchSA/citc/raw/master/rpms/dynamiccluster-1.0.0-1.el6.noarch.rpm
 
 
 # Configuration
