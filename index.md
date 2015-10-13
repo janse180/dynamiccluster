@@ -16,14 +16,11 @@ permalink: /index.html
 
 ## Overview
 
-        Dynamic Cluster is a service that runs alongside your cluster management system and monitors its workload, based on which it automatically
-    starts up and shuts down worker nodes in the cloud.
+Dynamic Cluster is a service that runs alongside your cluster management system and monitors its workload, based on which it automatically starts up and shuts down worker nodes in the cloud.
 
 Dynamic Cluster features a modular design, which allows it to be easily extended to support different types of clusters and cloud infrastructure. 
 Version 1 supports two cluster management systems, Torque/MAUI and SGE, as well as two cloud systems, OpenStack and AWS.
 More will be added in future releases.
-
-
 
 Dynamic Cluster runs independently of the cluster and the cloud. It doesn't store any states in any database.
 All state information is obtained from the cluster and the cloud, and it works according to these states.
