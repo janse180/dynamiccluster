@@ -80,7 +80,7 @@ The configuration file include four sections. An example can be found [here](htt
 
 ## General dynamic cluster variables
 
-This section includes variables for dynamic cluster itself.
+This section includes variables for dynamic cluster itself. All time interval variables are optional. If they don't appear in the config file, the default value will be used.
 
 Max idle time (in seconds) is the amount of time a worker node can be idle for before it will be deleted. The default value is 600.
     
@@ -475,11 +475,11 @@ Log level.
 
 <pre><code>log_level: 3</code></pre>
     
-Path of log file
+Path of log file.
     
     log_location: /tmp/dynamiccluster.log
     
-Log format
+Log format.
     
     log_format: "%(asctime)s - %(levelname)s - %(processName)s - %(threadName)s - %(message)s"
     
