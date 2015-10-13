@@ -9,14 +9,14 @@ permalink: /index.html
 
   <section id="lead" class="lead">
 
-      Dynamic Cluster can dynamically provision cluster worker nodes in the cloud, automatically scaling the size of the cluster to meet the workload. It takes advantage of the scalability and elasticity of the cloud to ensure that the cloud resources automatically match the cluster workload, within a specified maximum and minimum cluster size.
+      Dynamic Cluster can dynamically provision cluster worker nodes in the cloud, automatically scaling the size of the cluster to meet the workload. 
     
   </section>
 
 
 ## Overview
 
-Dynamic Cluster is a service that runs alongside your cluster management system and monitors its workload, based on which it automatically starts up and shuts down worker nodes in the cloud.
+Dynamic Cluster is a service that runs alongside your cluster management system and monitors its workload, based on which it automatically starts up and shuts down worker nodes in the cloud. It takes advantage of the scalability and elasticity of the cloud to ensure that the cloud resources automatically match the cluster workload, within a specified maximum and minimum cluster size.
 
 Dynamic Cluster features a modular design, which allows it to be easily extended to support different types of clusters and cloud infrastructure. 
 Version 1 supports two cluster management systems, Torque/MAUI and SGE, as well as two cloud systems, OpenStack and AWS.
