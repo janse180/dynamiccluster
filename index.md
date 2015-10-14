@@ -5,6 +5,8 @@ slug: home
 permalink: /index.html
 ---
 
+# Dynamic Cluster
+
 <p></p>
 
   <section id="lead" class="lead">
