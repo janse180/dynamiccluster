@@ -5,7 +5,7 @@ slug: faq
 permalink: /faq.html
 ---
 
-## FAQ
+# FAQ
 
 Frequently asked questions.
 
