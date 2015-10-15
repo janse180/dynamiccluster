@@ -5,7 +5,7 @@ slug: restapi
 permalink: /restapi.html
 ---
 
-# Restful API
+## Restful API
 
 The Restful API is the main approach to manipulate Dynamic Cluster. It doesn't have any authentication so you can place it behind Apache or Nginx to protect it. An example can be found [here](https://github.com/eResearchSA/citc/blob/master/all-in-one/srv/salt/httpd/ssl.conf).
 

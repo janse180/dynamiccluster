@@ -11,7 +11,7 @@ This section explains how Dynamic Cluster is installed and configured. For some 
 
 ## Cloud library installation
 
-Depending on the particular cloud that you use, its client library needs to be installed.
+Before installing Dynamic Cluster, depending on the particular cloud that you use, its client library needs to be installed.
 
 ### OpenStack
 
@@ -87,6 +87,44 @@ The configuration file includes four sections. An example can be found [here](ht
 
 This section includes variables for dynamic cluster itself. All time interval variables are optional. If they don't appear in the config file, the default value will be used.
 
+Number of worker processes. Dynamic Cluster spawns multiple processes to communicate with cloud systems.
+    
+    worker_process_number: 2
+    
+Automatic mode. Dynamic cluster works out for you which worker nodes to shut down and how many to fire up according to work load. Setting it to False will turn it into a static cluster, but the admin can still add or remove worker nodes manually.
+    
+    auto_mode: True
+    
+The port number of the built-in admin server, which serves the Restful API and a web-based dashboard.
+
+    admin-server:
+      port: 8001
+      
+The method to check if a new instance has finished configuration. Two methods are built-in. Users can write their custom checkers.
+Port checker checks a port to see if it is listening.
+
+    config-checker:
+      port:
+        number: 15002
+
+Salt checker uses salt client to check an instance's configuration status (highstate).
+        
+    config-checker:
+      plugin:
+        name: dynamiccluster.salt.SaltChecker
+        
+A script can be executed after cloud provisioning is finished (VM state in the cloud becomes ACTIVE in OpenStack or Running in AWS) 
+It takes three parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque.
+This is optional.
+    
+    post_vm_provision_command: /the/path/some.sh {0} {1} {2}
+    
+A script can be executed after a VM is destroyed from the cloud.
+It takes three parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque.
+This is optional.
+
+    post_vm_destroy_command: /the/path/some.sh {0} {1} {2}
+
 Max idle time (in seconds) is the amount of time a worker node can be idle for before it will be deleted. The default value is 600.
     
     max_idle_time: 600
@@ -112,44 +150,6 @@ Auto provision interval (in seconds) is the time interval that Dynamic Cluster c
     
     auto_provision_interval: 60
     
-Number of workers. Dynamic Cluster spawns multiple processes to communicate with cloud systems.
-    
-    worker_number: 2
-    
-Automatic mode. Dynamic cluster works out for you which worker nodes to shut down and how many to fire up according to work load. Setting it to False will turn it into a static cluster, but the admin can still add or remove worker nodes manually.
-    
-    auto_mode: True
-    
-The port number of the built-in admin server, which serves the Restful API and a web-based dashboard.
-
-    admin-server:
-      port: 8001
-      
-The method to check if a new instance has finished configuration. Two methods are built-in. Users can write their custom checkers.
-Port checker checks a port to see if it is listening.
-
-    config-checker:
-      port:
-        number: 15002
-
-Salt checker uses salt client to check an instance's highstate.
-        
-    config-checker:
-      plugin:
-        name: dynamiccluster.salt.SaltChecker
-        
-A script can be executed after cloud provisioning is finished (VM state in the cloud becomes ACTIVE in OpenStack or Running in AWS) 
-It takes three parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque.
-This is optional.
-    
-    post_vm_provision_command: /the/path/some.sh {0} {1} {2}
-    
-A script can be executed after a VM is destroyed from the cloud.
-It takes three parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque.
-This is optional.
-
-    post_vm_destroy_command: /the/path/some.sh {0} {1} {2}
-
 
 ### Cluster specific variables
 
@@ -169,13 +169,13 @@ Or
 
 Several variables in config are common:
 
-A list of queues that dynamic cluster cares about.
+A list of queues that dynamic cluster cares about. Worker nodes are assigned to queues by your queueing system's configuration or using [reservations](deploy.html#cloud-variables).
 
     queue_to_monitor: 
       - short
       - long
 
-The number of queued jobs to keep in memory for display. Because a queue can have thousands of pending jobs, we only display a certain number.
+The number of queued jobs to keep in memory to be displayed on the Dynamic Cluster dashboard. Because a queue can have thousands of pending jobs, we only display a certain number. To see a full list of queued jobs, please use the queueing system's client commands (such as qstat).
 
     queued_job_number_to_display: 30
 
@@ -298,7 +298,7 @@ The command to run qdel -f command to force deletion of a dead job
     
 ### Cloud variables
 
-The cloud section specifies cloud resources. Each resource can be an OpenStack resource or an AWS resource, which is set in _type_. They have some variables in common.
+The cloud section specifies cloud resources. Each resource can be an OpenStack resource or an AWS resource, which is set in _type_. They have some variables in common. Each resource has its own set of configuration, including numbers of worker nodes, flavour, image, project/tenancy, availability zone etc. This makes it clear and easy for users to use cloud resources from different tenancies and/or from different availability zones. Some examples of how to set up multi-tenancy and multi-zone can be found in the [Dynamic Cluster as a Service](http://eresearchsa.github.io/dcaas/) project.
 
 Reservation specifies the limitation when a resource is added. The limitation can restrict the resource to a queue, an account string, or a property.
 
@@ -367,11 +367,13 @@ SSH key name
 
       key_name:
 
-Security groups, in list
+Security groups, in list, e.g.
 
       security_groups:
+          - group1
+          - group2
 
-Availability zone, if multi-zones are available, each zone is one resource.
+Availability zone. Each resource can only use one resource; if you want to run worker nodes in multiple zones, you need to define multiple resources.
 
       availability_zone:
 
@@ -379,7 +381,7 @@ Prefix of instance name, this is used to get all instances for the resource. Ple
 
       instance_name_prefix:
 
-User-data script file
+User-data script file. User data is the mechanism by which a user can pass information contained in a local file to an instance at launch time. The typical use case is to pass something like a shell script or a configuration file as user data. For more details please see [here](https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux_OpenStack_Platform/4/html/End_User_Guide/user-data.html).
 
       userdata_file:
       

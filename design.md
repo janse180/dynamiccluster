@@ -25,6 +25,18 @@ Each plugin starts a thread. For example, the graphite plugin thread sends messa
 
 The admin server runs on a lightweight HTTP server [bottlepy](http://bottlepy.org/docs/dev/index.html) that serves Restful API and the dashboard.
 
+## Definitions
+
+**Worker node**: a worker node in the queueing system
+
+**Job**: a job in the queueing system
+
+**Resource**: a group of worker nodes that have the same reservations and are managed by the same cloud account
+
+**Reservation**: the limitation applied to a worker node that can be used by specific users
+
+**Automatic Mode**: When Dynamic Cluster runs in automatic mode, it automatically grows and shrinks worker nodes according to the queueing system's work load. Otherwise, the number of worker nodes doesn't change automatically but the user can use dashboard or Restful API to change manually.
+
 ## States
 
 Each *worker node* in Dynamic Cluster has eight states:

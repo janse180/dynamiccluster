@@ -6,17 +6,25 @@
   {{ page.title }}
 </title>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-<script type="text/javascript" src="js/bootstrap.min.js"></script>
-<script type="text/javascript" src="js/prettify.min.js"></script>
-
-<link href="css/bootstrap.min.css" type="text/css" rel="stylesheet" />
-
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.21/themes/excite-bike/jquery-ui.css" rel="stylesheet">
+<link href="css/jquery.tocify.css" rel="stylesheet">
 <link href="css/font-awesome.min.css" type="text/css" rel="stylesheet" />
 <link href="css/prettify.css" type="text/css" rel="stylesheet" />
 
 <style type="text/css">
-  body { font-size: 16px; }
+  body { font-size: 16px; padding-top: 55px; }
   footer { background-color: #eee; margin-top: 1em; padding: 1em; text-align: center; }
   .navbar-inverse .navbar-brand { color: #fff; }
+          .navbar, .jumbotron { margin-bottom: 0; }
+          .jumbotron-side { padding-top: 2em; }
+          .notice-previous { background-color: #d9edf7; border-top: 1px solid #bce8f1; border-bottom: 1px solid #bce8f1; color: #31708f; padding: 0.5em; margin-bottom: 1em; text-align: center; }
+          .notice-previous a { font-weight: bold; }
+          @media (max-width: 767px) {
+		    #toc {
+		        position: relative;
+		        width: 100%;
+		        margin: 0px 0px 20px 0px;
+		    }
+		}
 </style>

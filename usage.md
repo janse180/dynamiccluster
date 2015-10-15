@@ -15,6 +15,10 @@ If you want to integrate Dynamic Cluster into your program/script, see the detai
 
 ## Dashboard
 
+The dashboard can be accessed from http://IP:port/dashboard, where IP is the IP address of your Dynamic Cluster server, and port is defined in [config](deploy.html#general-dynamic-cluster-variables). The default port number is 8001.
+
+Like the Restful API, the dashboard doesn't have any built-in authentication mechanism; since the dashboard allows people to launch/shut down worker nodes, we strongly suggest you protect it in some way. For example, you can place it behind Apache or Nginx, which can enforce password authentication. An example can be found [here](https://github.com/eResearchSA/citc/blob/master/all-in-one/srv/salt/httpd/ssl.conf). Or set up firewall (e.g. using iptables) to limit access from trusted IP addresses.
+
 The dashboard includes five views:
 
 * Worker nodes view
@@ -64,7 +68,7 @@ Each box has several things:
 
 Graph view shows the usage of Dynamic Cluster and usage statistics for worker nodes in the cluster.
 
-Its data is from [Graphite](http://graphite.wikidot.com/), and the [graphite plugin](/deploy.html#plugin-section) must be enabled.
+Its data is from [Graphite](http://graphite.wikidot.com/), and the [graphite plugin](deploy.html#plugin-section) must be enabled.
 
 It has a toolbar which can select the start time and end time to render the charts, and the refresh interval.
 

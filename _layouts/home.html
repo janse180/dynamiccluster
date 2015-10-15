@@ -2,20 +2,38 @@
 <html>
     <head>
         {% include header.html %}
-
-        <style type="text/css">
-          .navbar, .jumbotron { margin-bottom: 0; }
-          .jumbotron-side { padding-top: 2em; }
-          .notice-previous { background-color: #d9edf7; border-top: 1px solid #bce8f1; border-bottom: 1px solid #bce8f1; color: #31708f; padding: 0.5em; margin-bottom: 1em; text-align: center; }
-          .notice-previous a { font-weight: bold; }
-        </style>
     </head>
     <body>
         {% include navigation.html %}
-		<div class="container">
-        {{ content }}
+		<div class="container-fluid">
+			<div class="row">
+        		<div class="col-md-3">
+          			<div id="toc">
+          			</div><!--/.well -->
+        		</div><!--/span-->
+        		<div class="col-md-9">
+        			{{ content }}
+        		</div>
+        	</div>
 		</div>
         {% include footer.html %}
 
     </body>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	<script type="text/javascript" src="js/jquery-ui-1.9.1.custom.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="js/jquery.tocify.js"></script>
+	<script type="text/javascript" src="js/prettify.min.js"></script>
+    <script>
+        $(function() {
+            var toc = $("#toc").tocify({
+              selectors: "h2,h3,h4,h5",
+              extendPage: false,
+              highlightOnScroll: true,
+              scrollTo: 50,
+              theme: "jqueryui"
+            }).data("toc-tocify");
+        });
+    </script>
+    
 </html>
