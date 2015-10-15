@@ -5,11 +5,15 @@ slug: deploy
 permalink: /deploy.html
 ---
 
-# Cloud library installation
+# Deployment
 
-Depending on the cloud you use, its client library needs to be installed.
+This section explains how Dynamic Cluster is installed and configured. For some examples of particular configurations, and example scripts and Heat templates for cluster deployment, see the [Dynamic Cluster as a Service](http://eresearchsa.github.io/dcaas/) project.
 
-## OpenStack
+## Cloud library installation
+
+Depending on the particular cloud that you use, its client library needs to be installed.
+
+### OpenStack
 
 
 	yum install -y python-pip gcc-c++ python-devel git
@@ -28,7 +32,7 @@ Note: pip 7.1 seems not compatible with novaclient. But pip 1.3.0 works fine tho
 
 
 
-## AWS
+### AWS
 
 
 	yum install -y python-pip gcc-c++ python-devel git
@@ -39,18 +43,18 @@ and then
 
 	pip install boto
 
-# Installation
+## Installation
 
-You can install dynamic cluster from source code or using a RPM.
+You can install Dynamic Cluster from source code or using a RPM.
 
-## Install from Source
+### Install from Source
 
 You can clone its git repo or download the source tar ball from github. The document assumes the source is in /opt/dynamiccluster.
 
 Install its dependencies.
 
 
-	pip install -r /opt/dynamiccluster/reqirements.txt
+	pip install -r /opt/dynamiccluster/requirements.txt
 
 
 Copy init.d script from /opt/dynamiccluster/scripts/ to /etc/init.d
@@ -64,21 +68,22 @@ For details on how to change this configuration file, please see [Configuration]
 
 If you want to put log files in /var/log/dynamiccluster, please create that directory.
 
-## Install RPM package
+### Install RPM package
 
-RPMs can be found in [CITC](https://github.com/eResearchSA/citc/tree/master/rpms). We don't have a yum repo so we only publish RPM files.
+RPMs can be found in [DCAAS](https://github.com/eResearchSA/dcaas/tree/master/rpms). We don't have a yum repo so we only publish RPM files.
 
 Use yum to install it and yum will sort out the dependencies, e.g.
 
 
-	yum localinstall -y https://github.com/eResearchSA/citc/raw/master/rpms/dynamiccluster-1.0.0-1.el6.noarch.rpm
+	yum localinstall -y https://github.com/eResearchSA/dcaas/raw/master/rpms/dynamiccluster-1.0.0-1.el6.noarch.rpm
 
 
-# Configuration
+## Configuration
 
-The configuration file include four sections. An example can be found [here](https://github.com/eResearchSA/citc/blob/master/all-in-one/srv/salt/dynamiccluster/dynamiccluster.yaml).
+The configuration file includes four sections. An example can be found [here](https://github.com/eResearchSA/dcaas/blob/master/all-in-one/srv/salt/dynamiccluster/dynamiccluster.yaml).
 
-## General dynamic cluster variables
+
+### General Dynamic Cluster variables
 
 This section includes variables for dynamic cluster itself. All time interval variables are optional. If they don't appear in the config file, the default value will be used.
 
@@ -86,8 +91,7 @@ Max idle time (in seconds) is the amount of time a worker node can be idle for b
     
     max_idle_time: 600
     
-Max down time (in seconds) is the amount of time a worker node can be down (in error state) for before it will be deleted. The default value is 480.
-default is 480
+Max down time (in seconds) is the amount of time a worker node can be down (in error state) before it will be deleted. The default value is 480.
 
     max_down_time: 480
     
@@ -112,7 +116,7 @@ Number of workers. Dynamic Cluster spawns multiple processes to communicate with
     
     worker_number: 2
     
-Automatic mode. Dynamic cluster works out for you which worker node to kill and how many to fire up according to work load. Setting it to False will turn it into a static cluster, but the admin can still add or remove worker nodes manually.
+Automatic mode. Dynamic cluster works out for you which worker nodes to shut down and how many to fire up according to work load. Setting it to False will turn it into a static cluster, but the admin can still add or remove worker nodes manually.
     
     auto_mode: True
     
@@ -147,7 +151,7 @@ This is optional.
     post_vm_destroy_command: /the/path/some.sh {0} {1} {2}
 
 
-## Cluster specific variables
+### Cluster specific variables
 
 Dynamic cluster supports Torque and SGE. _type_ defines which cluster to use.
 
@@ -189,7 +193,7 @@ This is optional.
 
 Variables related to cluster commands are cluster specific. They can stay as it is because they are used by the code. The admin just needs adjust the path accordingly.
 
-### Torque variables
+#### Torque variables
 
 The command to query jobs in the queue. it must return data in XML format (-x).
 
@@ -245,7 +249,7 @@ The command to send a signal to a job.
     signal_job_command: /usr/bin/qsig -s {0} {1}
       
 
-### SGE variables
+#### SGE variables
 
 The command to query jobs in the queue. It must return data in XML format (-xml)
 
@@ -292,11 +296,11 @@ The command to run qdel -f command to force deletion of a dead job
 
     qdel_command: /opt/sge/bin/lx-amd64/qdel -f {0}
     
-## Cloud variables
+### Cloud variables
 
-The cloud section specifies cloud resources. Each resource can be an openstack resource or an AWS resource, which is set in _type_. They have some variables in common.
+The cloud section specifies cloud resources. Each resource can be an OpenStack resource or an AWS resource, which is set in _type_. They have some variables in common.
 
-Reservation speficies the limitation when a resource is added. The limitation can restrict the resource to a queue, an account string, or a property.
+Reservation specifies the limitation when a resource is added. The limitation can restrict the resource to a queue, an account string, or a property.
 
 For Torque:
 
@@ -331,23 +335,23 @@ Priority sets the priority of the resource, lower number means higher priority. 
         ...
         
 
-### OpenStack specific variables
+#### OpenStack specific variables
 
-Dynamic cluster uses Nova API to talk to OpenStack.
+Dynamic Cluster uses the Nova API to talk to OpenStack.
 
-Username of user's openstack account
+Username of user's OpenStack account
   
       username:
 
-Password of user's openstack account
+Password of user's OpenStack account
 
       password:
 
-Project (or tenant) of user's openstack account
+Project (or tenant) of user's OpenStack account
 
       project:
 
-Image UUID
+Image UUID for the virtual machine image to be used on the worker nodes
 
       image_uuid:
 
@@ -367,7 +371,7 @@ Security groups, in list
 
       security_groups:
 
-Avaiablility zone, if multi-zones are available, each zone is one resource.
+Availability zone, if multi-zones are available, each zone is one resource.
 
       availability_zone:
 
@@ -447,7 +451,7 @@ HTTP proxy port (optional)
 
       proxy_port:
       
-## Plugin section
+### Plugin section
 
 Dynamic cluster supports plugins. A plugin runs as a thread in the main process.
 
@@ -462,7 +466,7 @@ The graphite plugin sends the number of worker nodes and cores to graphite every
         port: 2003
         prefix: headnode.dynamiccluster
 
-## Logging section
+### Logging section
 
 Dynamic cluster uses python's built-in logging module for logs.
 
