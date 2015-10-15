@@ -7,11 +7,11 @@ permalink: /usage.html
 
 # Usage
 
-Users (admins) interact with Dynamic Cluster via its Restful interface.
+Users (cluster system administrators) interact with Dynamic Cluster via its Restful interface.
 
-To make things easier, a web-based dashboard is provided. A CLI may be available in future releases.
+To make things easier, a web-based dashboard is provided. A command line interface may be available in future releases.
 
-If you want to integrate Dynamic Cluster into your program/script, please see the details in [Restful API](/restapi.html).
+If you want to integrate Dynamic Cluster into your program/script, see the details in [Restful API](/restapi.html).
 
 ## Dashboard
 
@@ -25,13 +25,13 @@ The dashboard includes five views:
 
 ### Worker nodes view
 
-Worker nodes view shows the information of all worker nodes. Clicking the hostname of the node brings up a detail dialog.
+Worker nodes view shows information about all the worker nodes. Clicking the hostname of the node brings up a detailed dialog box.
 
 <img src="./images/wn.png" alt="Worker nodes view" width="1100" height="400" />
 
 ### Jobs view
 
-Jobs view shows pending jobs. The number of jobs is defined in config, cluster -> config -> queued_job_number_to_display. Clicking the id of the job brings up a detail dialog.
+Jobs view shows pending jobs. The number of jobs displayed is defined in config, cluster -> config -> queued_job_number_to_display. Clicking the id of the job brings up a detail dialog.
 
 <img src="./images/job.png" alt="Jobs view" width="1100" height="300" />
 
@@ -62,7 +62,7 @@ Each box has several things:
   
 ### Graph view
 
-Graph view shows the usage of Dynamic Cluster and stats of worker nodes.
+Graph view shows the usage of Dynamic Cluster and usage statistics for worker nodes in the cluster.
 
 Its data is from [Graphite](http://graphite.wikidot.com/), and the [graphite plugin](/deploy.html#plugin-section) must be enabled.
 
