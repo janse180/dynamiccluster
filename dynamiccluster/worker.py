@@ -19,7 +19,10 @@ class Task(object):
         self.data=data
         
     def __str__(self):
-        return "Task: type: %s, data: %s"%(["Quit", "Provision", "Destroy", "UpdateCloudState", "UpdateConfigStatus"][self.type], self.data)
+        instance=""
+        if 'instance' in data:
+            instance=data['instance'].uuid+' '+data['instance'].instance_name+' '+data['instance'].ip
+        return "Task: type: %s, instance: %s"%(["Quit", "Provision", "Destroy", "UpdateCloudState", "UpdateConfigStatus"][self.type], instance)
     
 class Result(object):
     WorkerCrash, Provision, Destroy, UpdateCloudState, UpdateConfigStatus = range(5)
