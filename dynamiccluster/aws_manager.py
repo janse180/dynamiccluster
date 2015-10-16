@@ -5,6 +5,7 @@ from dynamiccluster.cloud_manager import CloudManager
 import time
 import datetime
 import os
+import sys
 
 try:
     import boto
