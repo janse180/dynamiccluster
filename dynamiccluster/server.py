@@ -167,7 +167,7 @@ class DynamicEngine(threading.Thread):
             instance_list=cloud_manager.list()
             for instance in instance_list:
                 if instance.state==Instance.Active:
-                    workernodes=[w for w in self.info.worker_nodes if w.hostname==instance.dns_name]
+                    workernodes=[w for w in self.info.worker_nodes if instance.dns_name is not None and w.hostname==instance.dns_name]
                     if len(workernodes)>0:
                         log.debug("instance %s is a worker node in cluster"%instance.dns_name)
                         workernodes[0].instance=instance
