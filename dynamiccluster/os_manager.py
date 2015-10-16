@@ -179,7 +179,7 @@ class OpenStackManager(CloudManager):
             return Instance.Error
         elif server.status == "ACTIVE":
             return Instance.Active
-        elif server.status == "DELETING" or server.status == "DELETED" or getattr(server,"OS-EXT-STS:task_state").lower() == "deleting":
+        elif server.status == "DELETING" or server.status == "DELETED" or (getattr(server,"OS-EXT-STS:task_state") is not None and getattr(server,"OS-EXT-STS:task_state").lower() == "deleting"):
             return Instance.Deleting
         elif server.status != "ACTIVE" or getattr(server,"OS-EXT-STS:vm_state") != "active" or getattr(server,"OS-EXT-STS:task_state") is not None:
             return Instance.Starting
