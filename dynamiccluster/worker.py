@@ -13,7 +13,7 @@ from dynamiccluster.exceptions import CloudNotSupportedException, ConfigCheckerN
 log = getLogger(__name__)
 
 class Task(object):
-    Quit, Provision, Destroy, UpdateCloudState, UpdateConfigStatus = range(5)
+    Quit, Provision, Destroy, UpdateCloudState, UpdateConfigStatus, Unknown = range(6)
     def __init__(self, type, data={}):
         self.type=type
         self.data=data
@@ -21,7 +21,7 @@ class Task(object):
     def __str__(self):
         instance=""
         if 'instance' in self.data:
-            instance=self.data['instance'].uuid+' '+self.data['instance'].instance_name+' '+self.data['instance'].ip
+            instance="%s %s %s" % (self.data['instance'].uuid, self.data['instance'].instance_name, self.data['instance'].ip)
         return "Task: type: %s, instance: %s"%(["Quit", "Provision", "Destroy", "UpdateCloudState", "UpdateConfigStatus"][self.type], instance)
     
 class Result(object):
@@ -102,7 +102,7 @@ class Worker(multiprocessing.Process):
                     break
             except Exception as e:
                 log.exception("worker %s caught unknown exception, report to parent"%self.__id)
-                self.__result_queue.put(Result(Result.WorkerCrash, {'id':self.__id}))
+                self.__result_queue.put(Result(task.type if task else Task.Unknown, Result.WorkerCrash, {'id':self.__id}))
                 break
         log.debug("worker %s has quit"%self.__id)
     
