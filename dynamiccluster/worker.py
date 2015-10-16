@@ -20,8 +20,8 @@ class Task(object):
         
     def __str__(self):
         instance=""
-        if 'instance' in data:
-            instance=data['instance'].uuid+' '+data['instance'].instance_name+' '+data['instance'].ip
+        if 'instance' in self.data:
+            instance=self.data['instance'].uuid+' '+self.data['instance'].instance_name+' '+self.data['instance'].ip
         return "Task: type: %s, instance: %s"%(["Quit", "Provision", "Destroy", "UpdateCloudState", "UpdateConfigStatus"][self.type], instance)
     
 class Result(object):
