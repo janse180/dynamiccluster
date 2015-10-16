@@ -1,24 +1,4 @@
 dynamic-cluster:
-  # max_idle_time (in seconds) the worker node will be deleted if it has been idle for this amount of time
-  #  default is 600
-  max_idle_time: 600
-  # max_down_time (in seconds) the worker node will be deleted if it has been down for this amount of time
-  #  default is 480
-  max_down_time: 480
-  # max_launch_time (in seconds) it takes some time for a VM to be built in the cloud, from when a request is sent to the cloud
-  #    if the VM is still not in a useful state after this amount of time, it will be destroyed and another attempt will be made
-  #  default is 1200
-  max_launch_time: 1200
-  # cluster_poller_interval (in seconds) the time interval that Dynamic Cluster queries the cluster
-  #  default is 10
-  cluster_poller_interval: 10
-  # cloud_poller_interval (in seconds) the time interval that Dynamic Cluster queries the cloud
-  #  default is 20
-  cloud_poller_interval: 20
-  # auto_provision_interval (in secondes) the time interval that Dynamic Cluster checks queueing jobs to see if new worker nodes are needed
-  auto_provision_interval: 60
-  # number of workers
-  worker_number: 2
   # auto mode, dynamic cluster works out which one to kill and how many to fire up according to work load
   auto_mode: True
   admin-server:
@@ -38,6 +18,26 @@ dynamic-cluster:
   # a script to be executed after a VM is destroyed from the cloud
   #  it takes two parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
   #post_vm_destroy_command: /the/path/some.sh {0} {1} {2}
+  # number of worker processes
+  worker_process_number: 2
+  # max_idle_time (in seconds) the worker node will be deleted if it has been idle for this amount of time
+  #  default is 600
+  max_idle_time: 600
+  # max_down_time (in seconds) the worker node will be deleted if it has been down for this amount of time
+  #  default is 480
+  max_down_time: 480
+  # max_launch_time (in seconds) it takes some time for a VM to be built in the cloud, from when a request is sent to the cloud
+  #    if the VM is still not in a useful state after this amount of time, it will be destroyed and another attempt will be made
+  #  default is 1200
+  max_launch_time: 1200
+  # cluster_poller_interval (in seconds) the time interval that Dynamic Cluster queries the cluster
+  #  default is 10
+  cluster_poller_interval: 10
+  # cloud_poller_interval (in seconds) the time interval that Dynamic Cluster queries the cloud
+  #  default is 20
+  cloud_poller_interval: 20
+  # auto_provision_interval (in secondes) the time interval that Dynamic Cluster checks queueing jobs to see if new worker nodes are needed
+  auto_provision_interval: 60
     
 cluster:
   type: torque

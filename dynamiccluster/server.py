@@ -63,14 +63,14 @@ class DynamicServer(Daemon):
         adminServer.daemon = True
         adminServer.start()
         
-        worker_num=1
-        if "worker_number" in self.config['dynamic-cluster']:
-            worker_num=int(self.config['dynamic-cluster']['worker_number'])
+        worker_process_num=1
+        if "worker_process_number" in self.config['dynamic-cluster']:
+            worker_process_num=int(self.config['dynamic-cluster']['worker_process_number'])
         else:
             cpu_num=cpu_count()
             if cpu_num>1:
-                worker_num=cpu_num-1
-        for i in xrange(worker_num):
+                worker_process_num=cpu_num-1
+        for i in xrange(worker_process_num):
             p=Worker(i, self.task_queue, self.result_queue)
             p.daemon=True
             self.__workers.append(p)
