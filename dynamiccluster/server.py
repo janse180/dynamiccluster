@@ -7,7 +7,8 @@ import threading
 from threading import Thread
 from Queue import Empty
 from dynamiccluster.daemon import Daemon
-from multiprocessing import Process, Queue, cpu_count
+from multiprocessing import Process, cpu_count
+from multiprocessing import Queue as MultiprocessingQueue
 from dynamiccluster.admin_server import AdminServer
 import dynamiccluster.cluster_manager as cluster_manager
 from dynamiccluster.utilities import getLogger, excepthook, get_aws_vcpu_num_by_instance_type, init_object, get_log_level
@@ -35,8 +36,8 @@ class DynamicServer(Daemon):
         self.info=ClusterInfo()
         self.__working_path=working_path
         self.__running=True
-        self.task_queue=Queue()
-        self.result_queue=Queue()
+        self.task_queue=MultiprocessingQueue()
+        self.result_queue=MultiprocessingQueue()
         self.__workers=[]
         self.__plugin_objects=[]
         self.config=config

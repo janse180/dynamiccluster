@@ -608,7 +608,7 @@ function showWNOverview() {
 	    hideLegend: "false",
 	    lineWidth: "1",
 	    width: "1000",
-	    height: "8400",
+	    height: "800",
 	    title: "Worker Nodes Memory Used"
 	  });
 	  $("#netview").graphite({
