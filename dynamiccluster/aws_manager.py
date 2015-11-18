@@ -87,7 +87,7 @@ class AWSManager(CloudManager):
                     else:
                         kwargs["security_group_ids"]=self.config['security_groups']
                     if bdm:
-                        kwargs["block_device_mappings"]=[bdm]
+                        kwargs["block_device_map"]=bdm
                     req=self.conn.request_spot_instances(self.config['spot_bid'], self.config['image_id'], **kwargs)
                     log.debug("create spot request %s" % req)
                     if len(req)==0:
@@ -123,7 +123,7 @@ class AWSManager(CloudManager):
                     else:
                         kwargs["security_group_ids"]=self.config['security_groups']
                     if bdm:
-                        kwargs["block_device_mappings"]=[bdm]
+                        kwargs["block_device_map"]=bdm
                     reservation = self.conn.run_instances(self.config['image_id'], **kwargs) 
                     for server in reservation.instances:
                         server.add_tag('Name', server_name)
