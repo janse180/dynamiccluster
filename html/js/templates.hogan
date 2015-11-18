@@ -1,0 +1,75 @@
+<script id="workernodesview">
+<div class="panel panel-default">
+  <div class="panel-heading">Worker Nodes</div>
+  <div class="table-responsive">
+    <table class="table table-striped table-condensed">
+      <thead>
+        <tr>
+		  <th>Hostname</th>
+		  <th>Type</th>
+		  <th>Instance Name</th>
+		  <th>VCPUS</th>
+		  <th>State</th>
+		  <th>IP</th>
+		  <th>State In Cloud</th>
+		  <th>In current state for</th>
+		  <th>Resource</th>
+		  <th>Jobs</th>
+		</tr>
+	  </thead>
+	  <tbody id="wntable">
+		{{#nodes}}
+		<tr>
+		  <th><a href='javascript:showWorkerNode("{{hostname}}")'>{{hostname}}</a></th>
+		  <td>{{type}}</td>
+		  <td>{{instance_name}}</td>
+		  <td>{{num_proc}}</td>
+		  <td>{{state}}</td>
+		  <td>{{ip}}</td><td>{{cloud_state}}</td>
+		  <td>{{time_in_current_state}}</td>
+		  <td>{{resource}}</td>
+		  <td>{{jobs}}</td>
+		</tr>
+		{{/nodes}}
+	  </tbody>
+	</table>
+  </div>
+</div>
+</script>
+<script id="workernode">
+<table style="width: auto;" class="table table-striped">
+	<tr>
+		<th>Hostname</th><td>{{hostname}}</td>
+	</tr>
+	<tr>
+		<th>Type</th><td>{{type}}</td></tr>
+		<tr><th>VCPUS</th><td>{{num_proc}}</td></tr>
+		<tr><th>State</th><td>{{state}}</td></tr>
+		<tr><th>In current state for</th><td>{{time_in_current_state}}</td></tr>
+		{{#jobs}}
+		<tr><th>Jobs</th><td>{{jobs}}</td></tr>
+		{{/jobs}}
+		{{#instance}}
+		<tr><th>Instance Name</th><td>{{instance.instance_name}}</td></tr>
+		<tr><th>UUID</th><td>{{instance.uuid}}</td></tr>
+		<tr><th>Cloud Resource</th><td>{{instance.cloud_resource}}</td></tr>
+		<tr><th>IP</th><td>{{instance.ip}}</td></tr>
+		<tr><th>DNS Name</th><td>{{instance.dns_name}}</td></tr>
+		<tr><th>State</th><td>{{instance.state}}</td></tr>
+		<tr><th>Flavor</th><td>{{instance.flavor}}</td></tr>
+		<tr><th>VCPU Number</th><td>{{instance.vcpu_number}}</td></tr>
+		<tr><th>Availability Zone</th><td>{{instance.availability_zone}}</td></tr>
+		<tr><th>Key Name</th><td>{{instance.key_name}}</td></tr>
+		<tr><th>Security Groups</th><td>{{instance.security_groups}}</td></tr>
+		<tr><th>Creation Time</th><td>{{instance.creation_time}}</td></tr>
+		<tr><th>Last Update Time</th><td>{{instance.last_update_time}}</td></tr>
+		<tr><th>In Task</th><td>{{instance.tasked}}</td></tr>
+		<tr><th>Last Task Result</th><td>{{instance.last_task_result}}</td></tr>
+		{{/instance}}
+		<tr><th>Extra Attributes</th><td>&nbsp;</td></tr>
+		{{#extra_attributes}}
+		<tr><th>{{ key }}</th><td>{{ value }}</td></tr>
+		{{/extra_attributes}}
+	</tr>
+</table>
+</script>

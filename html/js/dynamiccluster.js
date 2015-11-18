@@ -9,9 +9,9 @@ function initWNView(){
 	  $('#rtab').removeClass('active');
 	  $('#gtab').removeClass('active');
 	  $('#stab').removeClass('active');
-	  $("#main").html('<div class="panel panel-default"><div class="panel-heading">Worker Nodes</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead>'+
-			  '<tr><th>Hostname</th><th>Type</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>In current state for</th>'+
-			  '<th>Resource</th><th>Jobs</th></tr></thead><tbody id="wntable"></tbody></table></div></div>');
+	  //$("#main").html('<div class="panel panel-default"><div class="panel-heading">Worker Nodes</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead>'+
+	//		  '<tr><th>Hostname</th><th>Type</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>In current state for</th>'+
+	//		  '<th>Resource</th><th>Jobs</th></tr></thead><tbody id="wntable"></tbody></table></div></div>');
 	  $.getJSON( "/workernode", function( data ) {
 		  var items = [];
 		  var nodes = [];
@@ -31,11 +31,24 @@ function initWNView(){
 			  }
 			  jobs="";
 			  if (val.jobs) jobs=val.jobs;
-			  $('#wntable').append('<tr><th><a href=\'javascript:showWorkerNode("'+val.hostname+'")\'>'+val.hostname+'</a></th><td>'+val.type+'</td><td>'+instance_name+'</td><td>'+val.num_proc+'</td><td>'+
-					  convertWNState(val.state)+'</td><td>'+ip+'</td><td>'+cloud_state+'</td><td>'+convertTimeInCurrentState(val.time_in_current_state)+
-					  '</td><td>'+resource+'</td><td>'+jobs+'</td></tr>'); 
+			  nodes.push({"hostname":val.hostname, "type":val.type, "instance_name": instance_name,
+				  			"num_proc": val.num_proc, "state": convertWNState(val.state), "ip": ip,
+				  			"cloud_state": cloud_state, "time_in_current_state": convertTimeInCurrentState(val.time_in_current_state),
+				  			"resource": resource, "jobs": jobs});
+			  //$('#wntable').append('<tr><th><a href=\'javascript:showWorkerNode("'+val.hostname+'")\'>'+val.hostname+'</a></th><td>'+val.type+'</td><td>'+instance_name+'</td><td>'+val.num_proc+'</td><td>'+
+				//	  convertWNState(val.state)+'</td><td>'+ip+'</td><td>'+cloud_state+'</td><td>'+convertTimeInCurrentState(val.time_in_current_state)+
+				//	  '</td><td>'+resource+'</td><td>'+jobs+'</td></tr>'); 
 		  });
-		});
+		  
+		  $.get('js/templates.hogan', function(templates){
+	            var extTemplate = $(templates).filter('#workernodesview').html();
+	            var template = Hogan.compile(extTemplate);
+	            //console.log(nodes);
+	            var rendered = template.render({"nodes":nodes});
+	            //console.log(rendered);
+	            $("#main").html(rendered);
+		  });
+	   });
 }
 
 function convertTimeInCurrentState(t) {
@@ -49,41 +62,63 @@ function showWorkerNode(hostname) {
 	$.getJSON( "/workernode/"+hostname, function( data ) {
 		console.log(data);
 		$('#modalLabel').html(hostname);
-		htmlstr='<table style="width: auto;" class="table table-striped">'+
-				'<tr><th>Hostname</th><td>'+data.hostname+'</td></tr>'+
-				'<tr><th>Type</th><td>'+data.type+'</td></tr>'+
-				'<tr><th>VCPUS</th><td>'+data.num_proc+'</td></tr>'+
-				'<tr><th>State</th><td>'+convertWNState(data.state)+'</td></tr>'+
-				'<tr><th>In current state for</th><td>'+convertTimeInCurrentState(data.time_in_current_state)+'</td></tr>';
+		node={'hostname': data.hostname, 'type': data.type, 'num_proc': data.num_proc, 'state': convertWNState(data.state),
+				'time_in_current_state': convertTimeInCurrentState(data.time_in_current_state)}
+		//htmlstr='<table style="width: auto;" class="table table-striped">'+
+		//		'<tr><th>Hostname</th><td>'+data.hostname+'</td></tr>'+
+		//		'<tr><th>Type</th><td>'+data.type+'</td></tr>'+
+		//		'<tr><th>VCPUS</th><td>'+data.num_proc+'</td></tr>'+
+		//		'<tr><th>State</th><td>'+convertWNState(data.state)+'</td></tr>'+
+		//		'<tr><th>In current state for</th><td>'+convertTimeInCurrentState(data.time_in_current_state)+'</td></tr>';
 		if (data.jobs) {
-			htmlstr+='<tr><th>Jobs</th><td>'+data.jobs+'</td></tr>';
+			//htmlstr+='<tr><th>Jobs</th><td>'+data.jobs+'</td></tr>';
+			node['jobs']=jobs
 		}
 		if (data.instance) {
-			htmlstr+='<tr><th>Instance Name</th><td>'+data.instance.instance_name+'</td></tr>'+
-					'<tr><th>UUID</th><td>'+data.instance.uuid+'</td></tr>'+
-					'<tr><th>Cloud Resource</th><td>'+data.instance.cloud_resource+'</td></tr>'+
-					'<tr><th>IP</th><td>'+data.instance.ip+'</td></tr>'+
-					'<tr><th>DNS Name</th><td>'+data.instance.dns_name+'</td></tr>'+
-					'<tr><th>State</th><td>'+convertCloudState(data.instance.state)+'</td></tr>'+
-					'<tr><th>Flavor</th><td>'+data.instance.flavor+'</td></tr>'+
-					'<tr><th>VCPU Number</th><td>'+data.instance.vcpu_number+'</td></tr>'+
-					'<tr><th>Availability Zone</th><td>'+data.instance.availability_zone+'</td></tr>'+
-					'<tr><th>Key Name</th><td>'+data.instance.key_name+'</td></tr>'+
-					'<tr><th>Security Groups</th><td>'+data.instance.security_groups+'</td></tr>'+
-					'<tr><th>Creation Time</th><td>'+moment.unix(data.instance.creation_time).format("YYYY-M-D h:mm:ss")+'</td></tr>'+
-					'<tr><th>Last Update Time</th><td>'+moment.unix(data.instance.last_update_time).format("YYYY-M-D h:mm:ss")+'</td></tr>'+
-					'<tr><th>In Task</th><td>'+data.instance.tasked+'</td></tr>'+
-					'<tr><th>Last Task Result</th><td>'+data.instance.last_task_result+'</td></tr>';
+			node['instance']={'instance_name': data.instance.instance_name, 'uuid': data.instance.uuid,
+							  'cloud_resource': data.instance.cloud_resource, 'ip': data.instance.ip,
+							  'dns_name': data.instance.dns_name, 'state': convertCloudState(data.instance.state),
+							  'flavor': data.instance.flavor, 'vcpu_number': data.instance.vcpu_number,
+							  'availability_zone': data.instance.availability_zone, 
+							  'key_name': data.instance.key_name, 'security_groups': data.instance.security_groups,
+							  'creation_time': moment.unix(data.instance.creation_time).format("YYYY-M-D h:mm:ss"),
+							  'last_update_time': moment.unix(data.instance.last_update_time).format("YYYY-M-D h:mm:ss"),
+							  'tasked': data.instance.tasked, 'last_task_result': data.instance.last_task_result
+			}
+			//htmlstr+='<tr><th>Instance Name</th><td>'+data.instance.instance_name+'</td></tr>'+
+//					'<tr><th>UUID</th><td>'+data.instance.uuid+'</td></tr>'+
+//					'<tr><th>Cloud Resource</th><td>'+data.instance.cloud_resource+'</td></tr>'+
+//					'<tr><th>IP</th><td>'+data.instance.ip+'</td></tr>'+
+//					'<tr><th>DNS Name</th><td>'+data.instance.dns_name+'</td></tr>'+
+//					'<tr><th>State</th><td>'+convertCloudState(data.instance.state)+'</td></tr>'+
+//					'<tr><th>Flavor</th><td>'+data.instance.flavor+'</td></tr>'+
+//					'<tr><th>VCPU Number</th><td>'+data.instance.vcpu_number+'</td></tr>'+
+//					'<tr><th>Availability Zone</th><td>'+data.instance.availability_zone+'</td></tr>'+
+//					'<tr><th>Key Name</th><td>'+data.instance.key_name+'</td></tr>'+
+//					'<tr><th>Security Groups</th><td>'+data.instance.security_groups+'</td></tr>'+
+//					'<tr><th>Creation Time</th><td>'+moment.unix(data.instance.creation_time).format("YYYY-M-D h:mm:ss")+'</td></tr>'+
+//					'<tr><th>Last Update Time</th><td>'+moment.unix(data.instance.last_update_time).format("YYYY-M-D h:mm:ss")+'</td></tr>'+
+//					'<tr><th>In Task</th><td>'+data.instance.tasked+'</td></tr>'+
+//					'<tr><th>Last Task Result</th><td>'+data.instance.last_task_result+'</td></tr>';
 		}		
-		htmlstr+='<tr><th>Extra Attributes</th><td>&nbsp;</td></tr>';
+//		htmlstr+='<tr><th>Extra Attributes</th><td>&nbsp;</td></tr>';
 		if (data.extra_attributes) {
+			node['extra_attributes']=[]
 			$.each(data.extra_attributes, function( key, val ) {
-				htmlstr+='<tr><th>'+key+'</th><td>'+val.replace(/,/g,", ")+'</td></tr>';
+				node['extra_attributes'].push({'key': key, 'value': val.replace(/,/g,", ")});
+//				htmlstr+='<tr><th>'+key+'</th><td>'+val.replace(/,/g,", ")+'</td></tr>';
 			});
 		}
-		htmlstr+='</table>';
-		$('#modalMain').html(htmlstr);
-		$('#infoDialog').modal('show');
+//		htmlstr+='</table>';
+		$.get('js/templates.hogan', function(templates){
+	        var extTemplate = $(templates).filter('#workernode').html();
+	        var template = Hogan.compile(extTemplate);
+	        //console.log(nodes);
+	        var rendered = template.render(node);
+	        //console.log(rendered);
+	        $("#modalMain").html(rendered);
+			$('#infoDialog').modal('show');
+		});
 	});
 }
 
