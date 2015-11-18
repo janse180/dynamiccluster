@@ -190,7 +190,11 @@ cloud:
       availability_zone:
       subnet_id:
       use_public_ip_address:
-      #root_partition_size: 
+      #disk_map:
+      #  scratch:
+      #    device: /dev/sdb
+      #    size: 30
+      #    delete_on_termination: True
       instance_name_prefix:
       userdata_file:
       validate_certs: False

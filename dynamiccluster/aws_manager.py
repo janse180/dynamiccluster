@@ -65,11 +65,12 @@ class AWSManager(CloudManager):
                     log.exception("userdata file does not exist, can't create VM, please check your config.")
                     return None
                 bdm=None
-                if "root_partition_size" in self.config:
-                    dev_sda1 = boto.ec2.blockdevicemapping.EBSBlockDeviceType()
-                    dev_sda1.size = self.config["root_partition_size"] # size in Gigabytes
+                if "disk_map" in self.config:
                     bdm = boto.ec2.blockdevicemapping.BlockDeviceMapping()
-                    bdm['/dev/sda1'] = dev_sda1
+                    for disk in self.config['disk_map']:
+                        dev_disk = boto.ec2.blockdevicemapping.EBSBlockDeviceType(delete_on_termination=disk["delete_on_termination"])
+                        dev_disk.size = disk["size"] # size in Gigabytes
+                        bdm[disk["device"]] = dev_disk
                 if "spot_bid" in self.config:
                     #start spot
                     timeout=300

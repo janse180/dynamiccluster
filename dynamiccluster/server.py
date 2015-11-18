@@ -234,7 +234,7 @@ class DynamicEngine(threading.Thread):
                 result=self.__result_queue.get(block=False)
                 log.debug("got a result: %s"%result)
                 self.process_result(result)
-                #self.__result_queue.task_done()
+                self.__result_queue.task_done()
             except Empty:
                 pass
             time.sleep(1)
