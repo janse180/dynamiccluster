@@ -8,7 +8,7 @@ from threading import Thread
 from Queue import Empty
 from dynamiccluster.daemon import Daemon
 from multiprocessing import Process, cpu_count
-from multiprocessing import Queue as MultiprocessingQueue
+from multiprocessing import JoinableQueue as MultiprocessingQueue
 from dynamiccluster.admin_server import AdminServer
 import dynamiccluster.cluster_manager as cluster_manager
 from dynamiccluster.utilities import getLogger, excepthook, get_aws_vcpu_num_by_instance_type, init_object, get_log_level
