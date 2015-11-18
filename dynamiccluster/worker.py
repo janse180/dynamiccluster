@@ -62,31 +62,7 @@ class Worker(multiprocessing.Process):
                 try:
                     task=self.__task_queue.get_nowait()
                     log.debug("got task %s"%task)
-                    if task.type==Task.Provision:
-                        cloud_manager=self.__get_cloud_manager(task.data['resource'])
-                        instances=cloud_manager.boot(number=task.data['number'])
-                        self.__result_queue.put(Result(Result.Provision, Result.Success, {'instances':instances}))
-                    elif task.type==Task.UpdateCloudState:
-                        cloud_manager=self.__get_cloud_manager(task.data['resource'])
-                        instance=cloud_manager.update(instance=task.data['instance'])
-                        instance.last_update_time=time.time()
-                        self.__result_queue.put(Result(Result.UpdateCloudState, Result.Success, {'instance':instance}))
-                    elif task.type==Task.UpdateConfigStatus:
-                        checker=self.__get_config_checker(task.data['checker'])
-                        instance=checker.check(instance=task.data['instance'])
-                        instance.last_update_time=time.time()
-                        self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':instance}))
-                    elif task.type==Task.Destroy:
-                        cloud_manager=self.__get_cloud_manager(task.data['resource'])
-                        if cloud_manager.destroy(instance=task.data['instance']):
-                            instance=cloud_manager.update(instance=task.data['instance'])
-                            task.data['instance'].last_update_time=time.time()
-                            self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':instance}))
-                        else:
-                            self.__result_queue.put(Result(task.type, Result.Failed, task.data))
-                    elif task.type==Task.Quit:
-                        log.debug("got quit task, existing...")
-                        self.__running=False
+                    self.do_task(task)
                     self.__task_queue.task_done()
                 except Empty:
                     log.notice("got nothing from task queue")
@@ -107,6 +83,33 @@ class Worker(multiprocessing.Process):
                 self.__result_queue.put(Result(task.type if task else Task.Unknown, Result.WorkerCrash, {'id':self.__id}))
                 break
         log.debug("worker %s has quit"%self.__id)
+
+    def do_task(self, task):
+        if task.type==Task.Provision:
+            cloud_manager=self.__get_cloud_manager(task.data['resource'])
+            instances=cloud_manager.boot(number=task.data['number'])
+            self.__result_queue.put(Result(Result.Provision, Result.Success, {'instances':instances}))
+        elif task.type==Task.UpdateCloudState:
+            cloud_manager=self.__get_cloud_manager(task.data['resource'])
+            instance=cloud_manager.update(instance=task.data['instance'])
+            instance.last_update_time=time.time()
+            self.__result_queue.put(Result(Result.UpdateCloudState, Result.Success, {'instance':instance}))
+        elif task.type==Task.UpdateConfigStatus:
+            checker=self.__get_config_checker(task.data['checker'])
+            instance=checker.check(instance=task.data['instance'])
+            instance.last_update_time=time.time()
+            self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':instance}))
+        elif task.type==Task.Destroy:
+            cloud_manager=self.__get_cloud_manager(task.data['resource'])
+            if cloud_manager.destroy(instance=task.data['instance']):
+                instance=cloud_manager.update(instance=task.data['instance'])
+                task.data['instance'].last_update_time=time.time()
+                self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':instance}))
+            else:
+                self.__result_queue.put(Result(task.type, Result.Failed, task.data))
+        elif task.type==Task.Quit:
+            log.debug("got quit task, existing...")
+            self.__running=False
     
     def __get_cloud_manager(self, resource):
         if resource.type.lower()=="openstack":

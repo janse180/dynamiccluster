@@ -8,7 +8,7 @@ from threading import Thread
 from Queue import Empty
 from dynamiccluster.daemon import Daemon
 from multiprocessing import Process, cpu_count
-from multiprocessing import JoinableQueue as MultiprocessingQueue
+from Queue import Queue
 from dynamiccluster.admin_server import AdminServer
 import dynamiccluster.cluster_manager as cluster_manager
 from dynamiccluster.utilities import getLogger, excepthook, get_aws_vcpu_num_by_instance_type, init_object, get_log_level
@@ -27,6 +27,14 @@ from dynamiccluster.exceptions import *
 from dynamiccluster.resource_allocator import ResourceAllocator
 import logging
 
+from Queue import Empty
+from dynamiccluster.os_manager import OpenStackManager
+from dynamiccluster.aws_manager import AWSManager
+from dynamiccluster.config_checker import PortChecker
+from dynamiccluster.exceptions import CloudNotSupportedException, ConfigCheckerNotSupportedException
+import errno
+
+
 log = getLogger(__name__)
 
 class DynamicServer(Daemon):
@@ -36,12 +44,14 @@ class DynamicServer(Daemon):
         self.info=ClusterInfo()
         self.__working_path=working_path
         self.__running=True
-        self.task_queue=MultiprocessingQueue()
-        self.result_queue=MultiprocessingQueue()
+        self.task_queue=Queue()
+        self.result_queue=Queue()
         self.__workers=[]
         self.__plugin_objects=[]
+        self.__conductor=None
         self.config=config
         self.engine=None
+        self.__admin_server=None
         
     def __sigTERMhandler(self, signum, frame):
         log.debug("Caught signal %d. Exiting" % signum)
@@ -60,9 +70,13 @@ class DynamicServer(Daemon):
         sys.excepthook = excepthook
 
         log.debug("self.__working_path %s"%self.__working_path)
-        adminServer=AdminServer(self.engine, self.__working_path)
-        adminServer.daemon = True
-        adminServer.start()
+        self.__admin_server=AdminServer(self.engine, self.__working_path)
+        self.__admin_server.daemon = True
+        self.__admin_server.start()
+        
+        self.__conductor=TaskConductor(self.task_queue, self.result_queue)
+        self.__conductor.daemon = True
+        self.__conductor.start()
         
         worker_process_num=1
         if "worker_process_number" in self.config['dynamic-cluster']:
@@ -71,10 +85,10 @@ class DynamicServer(Daemon):
             cpu_num=cpu_count()
             if cpu_num>1:
                 worker_process_num=cpu_num-1
-        for i in xrange(worker_process_num):
-            p=Worker(i, self.task_queue, self.result_queue)
-            p.daemon=True
-            self.__workers.append(p)
+        #for i in xrange(worker_process_num):
+        #    p=Worker(i, self.task_queue, self.result_queue)
+        #    p.daemon=True
+        #    self.__workers.append(p)
         for w in self.__workers:
             w.start()
             log.debug("started worker pid=%d"%w.pid)
@@ -118,6 +132,84 @@ class DynamicServer(Daemon):
             plugin_obj.stop()
         self.engine.quit()
         log.debug("Waiting for Dynamic Cluster to exit ...")
+
+class TaskConductor(threading.Thread):
+    def __init__(self, task_queue, result_queue):
+        threading.Thread.__init__(self, name=self.__class__.__name__)
+        self.__running=True
+        self.__task_queue=task_queue
+        self.__result_queue=result_queue
+    def quit(self):
+        self.__running=False
+    def run(self):
+        log.debug("task conductor thread started")
+        while self.__running:
+            try:
+                log.notice("conductor waiting for task, is running? %s, queue %s size %s"%(self.__running,self.__task_queue,self.__task_queue.qsize()))
+                task=None
+                try:
+                    task=self.__task_queue.get_nowait()
+                    log.debug("got task %s"%task)
+                    self.do_task(task)
+                    self.__task_queue.task_done()
+                except Empty:
+                    log.notice("got nothing from task queue")
+                    if self.__task_queue.qsize()>0:
+                        log.error("task queue size %d but got nothing from task queue"%self.__task_queue.qsize())
+                    time.sleep(1)
+                except IOError, e:            
+                    if e.errno == errno.EINTR:
+                        break
+                    log.exception("IO ERROR")
+                except Exception as e:
+                    log.exception("task (%s) cannot be executed." % task)
+                    self.__result_queue.put(Result(task.type, Result.Failed, task.data))
+            except KeyboardInterrupt:
+                    break
+    def do_task(self, task):
+        if task.type==Task.Provision:
+            cloud_manager=self.__get_cloud_manager(task.data['resource'])
+            instances=cloud_manager.boot(number=task.data['number'])
+            self.__result_queue.put(Result(Result.Provision, Result.Success, {'instances':instances}))
+        elif task.type==Task.UpdateCloudState:
+            cloud_manager=self.__get_cloud_manager(task.data['resource'])
+            instance=cloud_manager.update(instance=task.data['instance'])
+            instance.last_update_time=time.time()
+            self.__result_queue.put(Result(Result.UpdateCloudState, Result.Success, {'instance':instance}))
+        elif task.type==Task.UpdateConfigStatus:
+            checker=self.__get_config_checker(task.data['checker'])
+            instance=checker.check(instance=task.data['instance'])
+            instance.last_update_time=time.time()
+            self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':instance}))
+        elif task.type==Task.Destroy:
+            cloud_manager=self.__get_cloud_manager(task.data['resource'])
+            if cloud_manager.destroy(instance=task.data['instance']):
+                instance=cloud_manager.update(instance=task.data['instance'])
+                task.data['instance'].last_update_time=time.time()
+                self.__result_queue.put(Result(Result.Destroy, Result.Success, {'instance':instance}))
+            else:
+                self.__result_queue.put(Result(task.type, Result.Failed, task.data))
+        elif task.type==Task.Quit:
+            log.debug("got quit task, existing...")
+            self.__running=False
+    
+    def __get_cloud_manager(self, resource):
+        if resource.type.lower()=="openstack":
+            return OpenStackManager(resource.name, resource.config)
+        elif resource.type.lower()=="aws":
+            return AWSManager(resource.name, resource.config)
+        else:
+            raise CloudNotSupportedException("Cloud type %s is not supported" % resource.type)
+        
+    def __get_config_checker(self, config):
+        if config.keys()[0].lower()=="port":
+            return PortChecker(port=config['port']['number'])
+        elif config.keys()[0].lower()=="plugin":
+            plugin_name=config['plugin']['name']
+            return init_object(plugin_name)
+        else:
+            raise ConfigCheckerNotSupportedException("Config checker %s is not supported" % config.keys()[0])
+            
             
 class DynamicEngine(threading.Thread):
     def __init__(self, config, info, task_queue, result_queue):
