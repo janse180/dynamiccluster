@@ -68,9 +68,9 @@ class AWSManager(CloudManager):
                 if "disk_map" in self.config:
                     bdm = boto.ec2.blockdevicemapping.BlockDeviceMapping()
                     for disk in self.config['disk_map']:
-                        dev_disk = boto.ec2.blockdevicemapping.EBSBlockDeviceType(delete_on_termination=disk["delete_on_termination"])
-                        dev_disk.size = disk["size"] # size in Gigabytes
-                        bdm[disk["device"]] = dev_disk
+                        dev_disk = boto.ec2.blockdevicemapping.EBSBlockDeviceType(delete_on_termination=self.config['disk_map'][disk]["delete_on_termination"])
+                        dev_disk.size = self.config['disk_map'][disk]["size"] # size in Gigabytes
+                        bdm[self.config['disk_map'][disk]["device"]] = dev_disk
                 if "spot_bid" in self.config:
                     #start spot
                     timeout=300
