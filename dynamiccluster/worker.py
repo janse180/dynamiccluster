@@ -60,7 +60,7 @@ class Worker(multiprocessing.Process):
                 log.notice("worker %s waiting for task, is running? %s, queue %s size %s"%(self.__id,self.__running,self.__task_queue,self.__task_queue.qsize()))
                 task=None
                 try:
-                    task=self.__task_queue.get(timeout=1)
+                    task=self.__task_queue.get_nowait()
                     log.debug("got task %s"%task)
                     if task.type==Task.Provision:
                         cloud_manager=self.__get_cloud_manager(task.data['resource'])
@@ -87,11 +87,12 @@ class Worker(multiprocessing.Process):
                     elif task.type==Task.Quit:
                         log.debug("got quit task, existing...")
                         self.__running=False
-                    self.__task_queue.task_done()
+                    #self.__task_queue.task_done()
                 except Empty:
                     log.notice("got nothing from task queue")
                     if self.__task_queue.qsize()>0:
                         log.error("task queue size %d but got nothing from task queue"%self.__task_queue.qsize())
+                    time.sleep(1)
                 except IOError, e:            
                     if e.errno == errno.EINTR:
                         break
