@@ -190,6 +190,7 @@ cloud:
       availability_zone:
       subnet_id:
       use_public_ip_address:
+      #root_partition_size: 
       instance_name_prefix:
       userdata_file:
       validate_certs: False

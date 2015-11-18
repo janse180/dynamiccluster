@@ -234,6 +234,7 @@ class DynamicEngine(threading.Thread):
                 result=self.__result_queue.get(block=False)
                 log.debug("got a result: %s"%result)
                 self.process_result(result)
+                self.__result_queue.task_done()
             except Empty:
                 pass
             time.sleep(1)
@@ -403,7 +404,7 @@ class DynamicEngine(threading.Thread):
             return
         res=self.get_resource_by_name(worker_node.instance.cloud_resource)
         current_usable_num=len([w for w in self.info.worker_nodes if w.instance and w.instance.cloud_resource==res.name and w.state in [WorkerNode.Idle, WorkerNode.Busy]])
-        log.debug("update current_usable_num of res %s: %s" % (res.name,current_usable_num))
+        log.notice("update current_usable_num of res %s: %s" % (res.name,current_usable_num))
         if current_usable_num+1>res.min_num:
             log.debug("held worker node %s and it has no running jobs, delete it" % worker_node.hostname)
             if self.__cluster.remove_node(worker_node, self.config['cloud'][worker_node.instance.cloud_resource]['reservation']):

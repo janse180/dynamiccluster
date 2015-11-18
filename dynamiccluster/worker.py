@@ -86,7 +86,8 @@ class Worker(multiprocessing.Process):
                             self.__result_queue.put(Result(task.type, Result.Failed, task.data))
                     elif task.type==Task.Quit:
                         log.debug("got quit task, existing...")
-                        break
+                        self.__running=False
+                    self.__task_queue.task_done()
                 except Empty:
                     log.notice("got nothing from task queue")
                     if self.__task_queue.qsize()>0:
