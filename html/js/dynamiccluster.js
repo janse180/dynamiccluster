@@ -149,7 +149,8 @@ function initJobView(){
 	  $('#rtab').removeClass('active');
 	  $('#gtab').removeClass('active');
 	  $('#stab').removeClass('active');
-	  $("#main").html('<div class="panel panel-default"><div class="panel-heading">Jobs</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Job Id</th><th>Name</th><th>State</th><th>Priority</th><th>Owner</th><th>Queue</th><th>Account</th><th>Property</th><th>Req. Walltime</th><th>Req. Mem</th><th>Req. Proc</th><th>Creation Time</th></tr></thead><tbody id="jtable"></tbody></table></div></div>');
+	  jobs=[];
+	  //$("#main").html('<div class="panel panel-default"><div class="panel-heading">Jobs</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Job Id</th><th>Name</th><th>State</th><th>Priority</th><th>Owner</th><th>Queue</th><th>Account</th><th>Property</th><th>Req. Walltime</th><th>Req. Mem</th><th>Req. Proc</th><th>Creation Time</th></tr></thead><tbody id="jtable"></tbody></table></div></div>');
 	  $.getJSON( "/job", function( data ) {
 		  var items = [];
 		  var nodes = [];
@@ -157,17 +158,30 @@ function initJobView(){
 		  $.each( data, function( key, val ) {
 			  //alert(val.id);
 			  //console.log(val);
-			  queue="&nbsp;";
+			  queue=" ";
 			  if (val.queue) queue=val.queue;
-			  account="&nbsp;";
+			  account=" ";
 			  if (val.account) account=val.account;
-			  property="&nbsp;";
+			  property=" ";
 			  if (val.property) property=val.property;
-			  requested_walltime="&nbsp;";
+			  requested_walltime=" ";
 			  if (val.requested_walltime) requested_walltime=val.requested_walltime;
-			  requested_mem="&nbsp;";
+			  requested_mem=" ";
 			  if (val.requested_mem) requested_mem=val.requested_mem;
-			  $('#jtable').append('<tr><th><a href=\'javascript:showJob("'+val.jobid+'")\'>'+val.jobid+'</a></th><td>'+val.name+'</td><td>'+convertJobState(val.state)+'</td><td>'+val.priority+'</td><td>'+val.owner+'</td><td>'+queue+'</td><td>'+account+'</td><td>'+property+'</td><td>'+requested_walltime+'</td><td>'+requested_mem+'</td><td>'+convertProc(val)+'</td><td>'+moment.unix(val.creation_time).format("YYYY-M-D h:mm:ss")+'</td></tr>'); 
+			  job={"jobid": val.jobid, "name": val.name, "state": convertJobState(val.state), "priority": val.priority,
+				  		 "owner": val.owner, "queue": queue, "account": account, "property": property, "requested_walltime": requested_walltime,
+				  		 "requested_mem": requested_mem, "creation_time": moment.unix(val.creation_time).format("YYYY-M-D h:mm:ss"),
+				  		 "proc": convertProc(val)};
+			  //$('#jtable').append('<tr><th><a href=\'javascript:showJob("'+val.jobid+'")\'>'+val.jobid+'</a></th><td>'+val.name+'</td><td>'+convertJobState(val.state)+'</td><td>'+val.priority+'</td><td>'+val.owner+'</td><td>'+queue+'</td><td>'+account+'</td><td>'+property+'</td><td>'+requested_walltime+'</td><td>'+requested_mem+'</td><td>'+convertProc(val)+'</td><td>'+moment.unix(val.creation_time).format("YYYY-M-D h:mm:ss")+'</td></tr>'); 
+			  jobs.push(job);
+		  });
+		  $.get('js/templates.hogan', function(templates){
+		        var extTemplate = $(templates).filter('#jobview').html();
+		        var template = Hogan.compile(extTemplate);
+		        console.log(jobs);
+		        var rendered = template.render({'jobs':jobs});
+		        console.log(rendered);
+		        $("#main").html(rendered);
 		  });
 		});
 }

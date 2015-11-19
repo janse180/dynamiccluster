@@ -18,8 +18,8 @@ dynamic-cluster:
   # a script to be executed after a VM is destroyed from the cloud
   #  it takes two parameters which are the hostname of the VM, the IP of the VM and its name in dynamic torque
   #post_vm_destroy_command: /the/path/some.sh {0} {1} {2}
-  # number of worker processes
-  worker_process_number: 2
+  # number of worker threads
+  worker_thread_number: 2
   # max_idle_time (in seconds) the worker node will be deleted if it has been idle for this amount of time
   #  default is 600
   max_idle_time: 600

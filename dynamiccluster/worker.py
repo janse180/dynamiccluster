@@ -1,5 +1,4 @@
-import multiprocessing
-import signal
+import threading
 import time
 import sys
 import errno
@@ -34,30 +33,22 @@ class Result(object):
     def __str__(self):
         return "Result: type: %s, status: %s, data: %s"%(["WorkerCrash", "Provision", "Destroy", "UpdateCloudState", "UpdateConfigStatus"][self.type], ["Success", "Failed"][self.status], self.data)
       
-class Worker(multiprocessing.Process):
+class Worker(threading.Thread):
     def __init__(self, id, task_queue, result_queue):
-        super(Worker, self).__init__()
-        self.__id=id
+        threading.Thread.__init__(self, name="Worker %s"%id)
+        self.id=id
         self.__task_queue=task_queue
         self.__result_queue=result_queue
         self.__running=True
-        
-    def __sigTERMhandler(self, signum, frame):
-        log.debug("Caught signal %d. Exiting" % signum)
-        self.quit()
         
     def quit(self):
         self.__running=False
 
     def run(self):
-        #stop child process propagating signals to parent
-        signal.signal(signal.SIGINT, self.__sigTERMhandler)
-        signal.signal(signal.SIGTERM, self.__sigTERMhandler)
-        sys.excepthook = excepthook
-        log.debug("worker %s started"%self.__id)
+        log.debug("worker %s started"%self.id)
         while self.__running:
             try:
-                log.notice("worker %s waiting for task, is running? %s, queue %s size %s"%(self.__id,self.__running,self.__task_queue,self.__task_queue.qsize()))
+                log.notice("worker %s waiting for task, is running? %s, queue %s size %s"%(self.id,self.__running,self.__task_queue,self.__task_queue.qsize()))
                 task=None
                 try:
                     task=self.__task_queue.get_nowait()
@@ -76,13 +67,15 @@ class Worker(multiprocessing.Process):
                 except Exception as e:
                     log.exception("task (%s) cannot be executed." % task)
                     self.__result_queue.put(Result(task.type, Result.Failed, task.data))
+                    self.__task_queue.task_done()
+                    time.sleep(1)
             except KeyboardInterrupt:
                     break
             except Exception as e:
-                log.exception("worker %s caught unknown exception, report to parent"%self.__id)
-                self.__result_queue.put(Result(task.type if task else Task.Unknown, Result.WorkerCrash, {'id':self.__id}))
+                log.exception("worker %s caught unknown exception, report to parent"%self.id)
+                self.__result_queue.put(Result(task.type if task else Task.Unknown, Result.WorkerCrash, {'id':self.id}))
                 break
-        log.debug("worker %s has quit"%self.__id)
+        log.debug("worker %s has quit"%self.id)
 
     def do_task(self, task):
         if task.type==Task.Provision:
@@ -108,7 +101,7 @@ class Worker(multiprocessing.Process):
             else:
                 self.__result_queue.put(Result(task.type, Result.Failed, task.data))
         elif task.type==Task.Quit:
-            log.debug("got quit task, existing...")
+            log.debug("got quit task, exiting...")
             self.__running=False
     
     def __get_cloud_manager(self, resource):
