@@ -178,7 +178,7 @@ function initJobView(){
 		  $.get('js/templates.hogan', function(templates){
 		        var extTemplate = $(templates).filter('#jobview').html();
 		        var template = Hogan.compile(extTemplate);
-		        console.log(jobs);
+//		        console.log(jobs);
 		        var rendered = template.render({'jobs':jobs});
 		        console.log(rendered);
 		        $("#main").html(rendered);
@@ -200,38 +200,54 @@ function showJob(jobid) {
 	$.getJSON( "/job/"+jobid, function( data ) {
 		console.log(data);
 		$('#modalLabel').html(jobid);
-		htmlstr='<table style="width: auto;" class="table table-striped">'+
-				'<tr><th>Job ID</th><td>'+data.jobid+'</td></tr>'+
-				'<tr><th>Name</th><td>'+data.name+'</td></tr>'+
-				'<tr><th>Priority</th><td>'+data.priority+'</td></tr>'+
-				'<tr><th>State</th><td>'+convertJobState(data.state)+'</td></tr>'+
-				'<tr><th>Owner</th><td>'+data.owner+'</td></tr>';
+//		htmlstr='<table style="width: auto;" class="table table-striped">'+
+//				'<tr><th>Job ID</th><td>'+data.jobid+'</td></tr>'+
+//				'<tr><th>Name</th><td>'+data.name+'</td></tr>'+
+//				'<tr><th>Priority</th><td>'+data.priority+'</td></tr>'+
+//				'<tr><th>State</th><td>'+convertJobState(data.state)+'</td></tr>'+
+//				'<tr><th>Owner</th><td>'+data.owner+'</td></tr>';
+		job={"jobid": data.jobid, "name": data.name, "priority": data.priority, "state": convertJobState(data.state),
+				"owner": data.owner, "proc": convertProc(data), "creation_time": moment.unix(data.creation_time).format("YYYY-M-D h:mm:ss")};
 		if (data.queue) {
-			htmlstr+='<tr><th>Queue</th><td>'+data.queue+'</td></tr>';
+			//htmlstr+='<tr><th>Queue</th><td>'+data.queue+'</td></tr>';
+			job['queue']=data.queue;
 		}
 		if (data.account) {
-			htmlstr+='<tr><th>Account</th><td>'+data.account+'</td></tr>';
+			//htmlstr+='<tr><th>Account</th><td>'+data.account+'</td></tr>';
+			job['account']=data.account;
 		}
 		if (data.property) {
-			htmlstr+='<tr><th>Property</th><td>'+data.property+'</td></tr>';
+			//htmlstr+='<tr><th>Property</th><td>'+data.property+'</td></tr>';
+			job['property']=data.property;
 		}
 		if (data.requested_walltime) {
-			htmlstr+='<tr><th>Requested Walltime</th><td>'+data.requested_walltime+'</td></tr>';
+			//htmlstr+='<tr><th>Requested Walltime</th><td>'+data.requested_walltime+'</td></tr>';
+			job['requested_walltime']=data.requested_walltime;
 		}
 		if (data.requested_mem) {
-			htmlstr+='<tr><th>Requested Memory</th><td>'+data.requested_mem+'</td></tr>';
+			//htmlstr+='<tr><th>Requested Memory</th><td>'+data.requested_mem+'</td></tr>';
+			job['requested_mem']=data.requested_mem;
 		}
-		htmlstr+='<tr><th>Requested Processors</th><td>'+convertProc(data)+'</td></tr>';
-		htmlstr+='<tr><th>Creation Time</th><td>'+moment.unix(data.creation_time).format("YYYY-M-D h:mm:ss")+'</td></tr>';
-		htmlstr+='<tr><th>Extra Attributes</th><td>&nbsp;</td></tr>';
+//		htmlstr+='<tr><th>Requested Processors</th><td>'+convertProc(data)+'</td></tr>';
+//		htmlstr+='<tr><th>Creation Time</th><td>'+moment.unix(data.creation_time).format("YYYY-M-D h:mm:ss")+'</td></tr>';
+//		htmlstr+='<tr><th>Extra Attributes</th><td>&nbsp;</td></tr>';
 		if (data.extra_attributes) {
+			job['extra_attributes']=[]
 			$.each(data.extra_attributes, function( key, val ) {
-				htmlstr+='<tr><th>'+key+'</th><td>'+val.replace(/,/g,", ")+'</td></tr>';
+				job['extra_attributes'].push({'key': key, 'value': val.replace(/,/g,", ")});
+//				htmlstr+='<tr><th>'+key+'</th><td>'+val.replace(/,/g,", ")+'</td></tr>';
 			});
 		}
-		htmlstr+='</table>';
-		$('#modalMain').html(htmlstr);
-		$('#infoDialog').modal('show');
+//		htmlstr+='</table>';
+		$.get('js/templates.hogan', function(templates){
+	        var extTemplate = $(templates).filter('#job').html();
+	        var template = Hogan.compile(extTemplate);
+	        //console.log(nodes);
+	        var rendered = template.render(job);
+	        //console.log(rendered);
+			$('#modalMain').html(rendered);
+			$('#infoDialog').modal('show');
+		});
 	});
 }
 
@@ -243,49 +259,63 @@ function initResourceView() {
 	  $('#rtab').addClass('active');
 	  //$("#main").html('<div class="panel panel-default"><div class="panel-heading">Resources</div><div class="table-responsive"><table class="table table-striped table-condensed"><thead><tr><th>Job Id</th><th>Name</th><th>State</th><th>Priority</th><th>Owner</th><th>Queue</th><th>Account String</th><th>Req. Walltime</th><th>Req. Mem</th><th>Req. Proc</th><th>Creation Time</th></tr></thead><tbody id="rtable"></tbody></table></div></div>');
 	  $.getJSON( "/resource", function( data ) {
-		  var items = [];
-		  var nodes = [];
+		  var resources = [];
 		  //alert(data);
-		  htmlstr='<div class="panel-group" id="accordion">';
+//		  htmlstr='<div class="panel-group" id="accordion">';
 		  $.each( data, function( key, val ) {
 			  //alert(val.id);
 			  console.log(val);
-			  htmlstr+='<div class="panel panel-default" id="panel'+val.name+'"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-target="#collapse'+val.name+'" href="#collapse'+val.name+'">'+val.name+'</a> ';
+			  resource={'name': val.name, 'type': val.type, 'priority': val.priority, 'min_num': val.min_num, 'current_num': val.current_num, 'max_num': val.max_num};
+//			  htmlstr+='<div class="panel panel-default" id="panel'+val.name+'"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-target="#collapse'+val.name+'" href="#collapse'+val.name+'">'+val.name+'</a> ';
 			  if (val.flag==1)
-				  htmlstr+='<span class="label label-info">Frozen</span>';
+				  resource['flag']="Frozen";
+//				  htmlstr+='<span class="label label-info">Frozen</span>';
 			  else if (val.flag==2)
-				  htmlstr+='<span class="label label-info">Draining</span>';
+				  resource['flag']="Draining";
+//				  htmlstr+='<span class="label label-info">Draining</span>';
 			  else if (val.flag==3)
-				  htmlstr+='<span class="label label-info">Drained</span>';
-			  htmlstr+='</h4></div><div id="collapse'+val.name+'" class="panel-collapse collapse in"><div class="panel-body">';
-			  htmlstr+='<div style="padding: 3px; float: left; width: 75%; text-align: left;"><h5><span class="label label-primary">Type</span>'+val.type+' <span class="label label-primary">Priority</span>'+val.priority+' <span class="label label-primary">Min</span> '+val.min_num+' <span class="label label-primary">Current</span> '+val.current_num+' <span class="label label-primary">Max</span> '+val.max_num+'&nbsp;&nbsp;';
-			  if (val.reservation_queue) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Queue</span>&nbsp;'+val.reservation_queue+'&nbsp;&nbsp;';
-			  if (val.reservation_property) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Property</span>&nbsp;'+val.reservation_property+'&nbsp;&nbsp;';
-			  if (val.reservation_account) htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Account</span>&nbsp;'+val.reservation_account+'&nbsp;&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-success btn-sm" id="addbutton'+val.name+'" data-toggle="modal" data-target="#addResDialog" data-whatever="'+val.name+'">Add</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="removebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="remove" data-whatever="'+val.name+'">Remove</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="holdbutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="hold" data-whatever="'+val.name+'">Hold</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="unholdbutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="unhold" data-whatever="'+val.name+'">Unhold</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="vacatebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="vacate" data-whatever="'+val.name+'">Vacate</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-info btn-sm" id="freezebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="freeze" data-whatever="'+val.name+'">Freeze</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-info btn-sm" id="drainbutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="drain" data-whatever="'+val.name+'">Drain</button>&nbsp;';
-			  htmlstr+='<button type="button" class="btn btn-info btn-sm" id="restorebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="restore" data-whatever="'+val.name+'">Restore</button></h5></div>';
-			  percentage=parseInt(val.current_num*100/val.max_num);
-			  htmlstr+='<div class="progress"><div class="progress-bar" role="progressbar" aria-valuenow="'+percentage+'" aria-valuemin="0" aria-valuemax="100" style="width: '+percentage+'%;">'+percentage+'%</div></div></div>';
-			  htmlstr+='<table class="table table-striped table-condensed" id="table'+val.name+'"><thead><tr><th>&nbsp;</th><th>Hostname</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>Jobs</th></tr></thead><tbody>';
+				  resource['flag']="Drained";
+//				  htmlstr+='<span class="label label-info">Drained</span>';
+//			  htmlstr+='</h4></div><div id="collapse'+val.name+'" class="panel-collapse collapse in"><div class="panel-body">';
+//			  htmlstr+='<div style="padding: 3px; float: left; width: 75%; text-align: left;"><h5><span class="label label-primary">Type</span>'+val.type+' <span class="label label-primary">Priority</span>'+val.priority+' <span class="label label-primary">Min</span> '+val.min_num+' <span class="label label-primary">Current</span> '+val.current_num+' <span class="label label-primary">Max</span> '+val.max_num+'&nbsp;&nbsp;';
+			  if (val.reservation_queue) resource['reservation_queue']=val.reservation_queue; //htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Queue</span>&nbsp;'+val.reservation_queue+'&nbsp;&nbsp;';
+			  if (val.reservation_property) resource['reservation_property']=val.reservation_property; //htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Property</span>&nbsp;'+val.reservation_property+'&nbsp;&nbsp;';
+			  if (val.reservation_account) resource['reservation_account']=val.reservation_account; //htmlstr+='<span class="label label-success">Reservation</span><span class="label label-info">Account</span>&nbsp;'+val.reservation_account+'&nbsp;&nbsp;';
+//			  htmlstr+='<button type="button" class="btn btn-success btn-sm" id="addbutton'+val.name+'" data-toggle="modal" data-target="#addResDialog" data-whatever="'+val.name+'">Add</button>&nbsp;';
+//			  htmlstr+='<button type="button" class="btn btn-danger btn-sm" id="removebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="remove" data-whatever="'+val.name+'">Remove</button>&nbsp;';
+//			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="holdbutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="hold" data-whatever="'+val.name+'">Hold</button>&nbsp;';
+//			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="unholdbutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="unhold" data-whatever="'+val.name+'">Unhold</button>&nbsp;';
+//			  htmlstr+='<button type="button" class="btn btn-warning btn-sm" id="vacatebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="vacate" data-whatever="'+val.name+'">Vacate</button>&nbsp;';
+//			  htmlstr+='<button type="button" class="btn btn-info btn-sm" id="freezebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="freeze" data-whatever="'+val.name+'">Freeze</button>&nbsp;';
+//			  htmlstr+='<button type="button" class="btn btn-info btn-sm" id="drainbutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="drain" data-whatever="'+val.name+'">Drain</button>&nbsp;';
+//			  htmlstr+='<button type="button" class="btn btn-info btn-sm" id="restorebutton'+val.name+'" data-toggle="modal" data-target="#modifyResDialog" data-action="restore" data-whatever="'+val.name+'">Restore</button></h5></div>';
+			  resource['percentage']=parseInt(val.current_num*100/val.max_num);
+//			  htmlstr+='<div class="progress"><div class="progress-bar" role="progressbar" aria-valuenow="'+percentage+'" aria-valuemin="0" aria-valuemax="100" style="width: '+percentage+'%;">'+percentage+'%</div></div></div>';
+//			  htmlstr+='<table class="table table-striped table-condensed" id="table'+val.name+'"><thead><tr><th>&nbsp;</th><th>Hostname</th><th>Instance Name</th><th>VCPUS</th><th>State</th><th>IP</th><th>State In Cloud</th><th>Jobs</th></tr></thead><tbody>';
+			  resource['worker_nodes']=[];
 			  $.each(val.worker_nodes, function(key1, val1){
-				  console.log(val1);
+//				  console.log(val1);
 				  jobs='';
 				  ip='';
 				  if (val1.jobs) jobs=val1.jobs;
 				  if (val1.instance.ip) ip=val1.instance.ip;
-				  htmlstr+='<tr><th><input class="checkbox" type="checkbox" value="'+val1.hostname+'"></th><th><a href=\'javascript:showWorkerNode("'+val1.hostname+'")\'>'+val1.hostname+'</a></th><td>'+val1.instance.instance_name+'</td><td>'+val1.num_proc+'</td><td>'+convertWNState(val1.state)+'</td><td>'+ip+'</td><td>'+convertCloudState(val1.instance.state)+'</td><td>'+jobs+'</td></tr>';
+				  resource['worker_nodes'].push({'hostname': val1.hostname, 'instance_name': val1.instance.instance_name, 'num_proc': val1.num_proc, 
+					  'wn_state': convertWNState(val1.state), 'cloud_state': convertCloudState(val1.instance.state), 'ip': ip, 'jobs': jobs});
+//				  htmlstr+='<tr><th><input class="checkbox" type="checkbox" value="'+val1.hostname+'"></th><th><a href=\'javascript:showWorkerNode("'+val1.hostname+'")\'>'+val1.hostname+'</a></th><td>'+val1.instance.instance_name+'</td><td>'+val1.num_proc+'</td><td>'+convertWNState(val1.state)+'</td><td>'+ip+'</td><td>'+convertCloudState(val1.instance.state)+'</td><td>'+jobs+'</td></tr>';
 			  });
-			  htmlstr+='</tbody></table></div></div>';
+			  resources.push(resource);
+//			  htmlstr+='</tbody></table></div></div>';
 		  });
-		  htmlstr+='</div>';
+//		  htmlstr+='</div>';
 		  //console.log(htmlstr);
-		  $("#main").html(htmlstr);
+		  $.get('js/templates.hogan', function(templates){
+		        var extTemplate = $(templates).filter('#resourceview').html();
+		        var template = Hogan.compile(extTemplate);
+		        console.log(resources);
+		        var rendered = template.render({'resources':resources});
+		        console.log(rendered);
+		        $("#main").html(rendered);
+		  });
 		});
 }
 
@@ -895,7 +925,7 @@ function initSettingView() {
 			  '<div id="configdiv" class="panel panel-default"></div>');
 	  showServerStatus();
 	  $.getJSON( "/server/config", function( data ) {
-		  console.log(data);
+//		  console.log(data);
 		  htmlStr='<div class="panel-heading"><h3 class="panel-title">Server Config</h3></div><table class="table table-condensed"><tr><th colspan="2">General</th></tr>';
 		  $.each( data['dynamic-cluster'], function( key, val ) {
 			  if (typeof val === 'object') {

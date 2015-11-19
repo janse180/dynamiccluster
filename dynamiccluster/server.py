@@ -461,6 +461,7 @@ class DynamicEngine():
             worker_node=self.get_worker_node_by_instance(instance)
             if worker_node is None:
                 return
+            log.debug("worker_node %s" % worker_node)
             instance.tasked=False
             instance.last_task_result=result.status
             previous_cloud_state=worker_node.instance.state
@@ -470,6 +471,7 @@ class DynamicEngine():
                 worker_node.state=WorkerNode.Deleting
             elif result.type in [Result.UpdateCloudState, Result.UpdateConfigStatus] and result.status==Result.Success:
                 self.trigger(worker_node)
+                log.debug("worker_node %s previous_cloud_state %s"%(worker_node,previous_cloud_state))
                 if worker_node.state==WorkerNode.Starting and previous_cloud_state!=Instance.Active and worker_node.instance.state==Instance.Active:
                     # run post-provision script here!
                     if "post_vm_provision_command" in self.config['dynamic-cluster']:

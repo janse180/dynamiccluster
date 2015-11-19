@@ -99,7 +99,7 @@
 				<tr>
 					<th><a href='javascript:showJob("{{jobid}}")'>{{jobid}}</a></th>
 					<td>{{name}}</td>
-					<td>{{state)}}</td>
+					<td>{{state}}</td>
 					<td>{{priority}}</td>
 					<td>{{owner}}</td>
 					<td>{{queue}}</td>
@@ -114,5 +114,97 @@
 			</tbody>
 		</table>
 	</div>
+</div>
+</script>
+<script id="job">
+<table style="width: auto;" class="table table-striped">
+	<tr><th>Job ID</th><td>{{jobid}}</td></tr>
+	<tr><th>Name</th><td>{{name}}</td></tr>
+	<tr><th>Priority</th><td>{{priority}}</td></tr>
+	<tr><th>State</th><td>{{state}}</td></tr>
+	<tr><th>Owner</th><td>{{owner}}</td></tr>
+	{{#queue}}
+	<tr><th>Queue</th><td>{{queue}}</td></tr>
+	{{/queue}}
+	{{#account}}
+	<tr><th>Account</th><td>{{account}}</td></tr>
+	{{/account}}
+	{{#property}}
+	<tr><th>Property</th><td>{{property}}</td></tr>
+	{{/property}}
+	{{#requested_walltime}}
+	<tr><th>Requested Walltime</th><td>{{requested_walltime}}</td></tr>
+	{{/requested_walltime}}
+	{{#requested_mem}}
+	<tr><th>Requested Memory</th><td>{{requested_mem}}</td></tr>
+	{{/requested_mem}}
+	<tr><th>Requested Processors</th><td>{{proc}}</td></tr>
+	<tr><th>Creation Time</th><td>{{creation_time}}</td></tr>
+	<tr><th>Extra Attributes</th><td>&nbsp;</td></tr>
+	{{#extra_attributes}}
+	<tr><th>{{ key }}</th><td>{{ value }}</td></tr>
+	{{/extra_attributes}}
+</table>
+</script>
+<script id="resourceview">
+<div class="panel-group" id="accordion">
+	{{#resources}}
+	<div class="panel panel-default" id="panel{{name}}">
+		<div class="panel-heading">
+			<h4 class="panel-title"><a data-toggle="collapse" data-target="#collapse{{name}}" href="#collapse{{name}}">{{name}}</a>{{#flag}} <span class="label label-info">{{flag}}</span>{{/flag}}</h4>
+		</div>
+		<div id="collapse{{name}}" class="panel-collapse collapse in">
+			<div class="panel-body">
+				<div style="padding: 3px; float: left; width: 75%; text-align: left;">
+					<h5>
+						<span class="label label-primary">Type</span>{{type}} <span class="label label-primary">Priority</span>{{priority}} <span class="label label-primary">Min</span> {{min_num}} <span class="label label-primary">Current</span> {{current_num}} <span class="label label-primary">Max</span> {{max_num}}&nbsp;&nbsp;
+						{{#reservation_queue}}<span class="label label-success">Reservation</span><span class="label label-info">Queue</span>&nbsp;{{reservation_queue}}&nbsp;&nbsp;{{/reservation_queue}}
+					  	{{#reservation_property}}<span class="label label-success">Reservation</span><span class="label label-info">Property</span>&nbsp;{{reservation_property}}&nbsp;&nbsp;{{/reservation_property}}
+					  	{{#reservation_account}}<span class="label label-success">Reservation</span><span class="label label-info">Account</span>&nbsp;{{reservation_account}}&nbsp;&nbsp;{{/reservation_account}}
+						<button type="button" class="btn btn-success btn-sm" id="addbutton{{name}}" data-toggle="modal" data-target="#addResDialog" data-whatever="{{name}}">Add</button>&nbsp;
+					  	<button type="button" class="btn btn-danger btn-sm" id="removebutton{{name}}" data-toggle="modal" data-target="#modifyResDialog" data-action="remove" data-whatever="{{name}}">Remove</button>&nbsp;
+					  	<button type="button" class="btn btn-warning btn-sm" id="holdbutton{{name}}" data-toggle="modal" data-target="#modifyResDialog" data-action="hold" data-whatever="{{name}}">Hold</button>&nbsp;
+					  	<button type="button" class="btn btn-warning btn-sm" id="unholdbutton{{name}}" data-toggle="modal" data-target="#modifyResDialog" data-action="unhold" data-whatever="{{name}}">Unhold</button>&nbsp;
+					  	<button type="button" class="btn btn-warning btn-sm" id="vacatebutton{{name}}" data-toggle="modal" data-target="#modifyResDialog" data-action="vacate" data-whatever="{{name}}">Vacate</button>&nbsp;
+					  	<button type="button" class="btn btn-info btn-sm" id="freezebutton{{name}}" data-toggle="modal" data-target="#modifyResDialog" data-action="freeze" data-whatever="{{name}}">Freeze</button>&nbsp;
+					  	<button type="button" class="btn btn-info btn-sm" id="drainbutton{{name}}" data-toggle="modal" data-target="#modifyResDialog" data-action="drain" data-whatever="{{name}}">Drain</button>&nbsp;
+					  	<button type="button" class="btn btn-info btn-sm" id="restorebutton{{name}}" data-toggle="modal" data-target="#modifyResDialog" data-action="restore" data-whatever="{{name}}">Restore</button>
+				  	</h5>
+				</div>
+				<div class="progress">
+					<div class="progress-bar" role="progressbar" aria-valuenow="{{percentage}}" aria-valuemin="0" aria-valuemax="100" style="width: {{percentage}}%;">{{percentage}}%</div>
+				</div>
+			</div>
+		  	<table class="table table-striped table-condensed" id="table{{name}}">
+		  		<thead>
+		  		<tr>
+		  			<th>&nbsp;</th>
+		  			<th>Hostname</th>
+		  			<th>Instance Name</th>
+		  			<th>VCPUS</th>
+		  			<th>State</th>
+		  			<th>IP</th>
+		  			<th>State In Cloud</th>
+		  			<th>Jobs</th>
+		  		</tr>
+		  		</thead>
+		  		<tbody>
+		  		{{#worker_nodes}}
+		  		<tr>
+		  			<th><input class="checkbox" type="checkbox" value="{{hostname}}"></th>
+		  			<th><a href='javascript:showWorkerNode("{{hostname}}")'>{{hostname}}</a></th>
+		  			<td>{{instance_name}}</td>
+		  			<td>{{num_proc}}</td>
+		  			<td>{{wn_state}}</td>
+		  			<td>{{ip}}</td>
+		  			<td>{{cloud_state}}</td>
+		  			<td>{{jobs}}</td>
+		  		</tr>
+		  		{{/worker_nodes}}
+		  		</tbody>
+		  	</table>
+		</div>
+	</div>
+	{{/resources}}
 </div>
 </script>

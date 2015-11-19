@@ -5,6 +5,7 @@ import threading
 import time
 import sys
 import errno
+import copy
 from dynamiccluster.utilities import getLogger, init_object, excepthook
 from Queue import Empty
 from dynamiccluster.os_manager import OpenStackManager
@@ -90,12 +91,12 @@ class Worker(threading.Thread):
             self.__result_queue.put(Result(Result.Provision, Result.Success, {'instances':instances}))
         elif task.type==Task.UpdateCloudState:
             cloud_manager=self.__get_cloud_manager(task.data['resource'])
-            instance=cloud_manager.update(instance=task.data['instance'])
+            instance=cloud_manager.update(instance=copy.deepcopy(task.data['instance']))
             instance.last_update_time=time.time()
             self.__result_queue.put(Result(Result.UpdateCloudState, Result.Success, {'instance':instance}))
         elif task.type==Task.UpdateConfigStatus:
             checker=self.__get_config_checker(task.data['checker'])
-            instance=checker.check(instance=task.data['instance'])
+            instance=checker.check(instance=copy.deepcopy(task.data['instance']))
             instance.last_update_time=time.time()
             self.__result_queue.put(Result(Result.UpdateConfigStatus, Result.Success, {'instance':instance}))
         elif task.type==Task.Destroy:
