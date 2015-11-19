@@ -1,3 +1,6 @@
+"""
+Utility methods
+"""
 import logging
 import sys
 import random
@@ -81,6 +84,9 @@ def get_aws_vcpu_num_by_instance_type(type):
     return 1
 
 def init_object(class_name, **kwargs):
+    """
+    initiate an object by class name
+    """
     mod_name = '.'.join(class_name.split('.')[:-1])
     class_name = class_name.split('.')[-1]
     try:

@@ -13,6 +13,9 @@ from dynamiccluster.hooks import run_post_command
 log = getLogger(__name__)
 
 class ClusterManager(object):
+    """
+    interface of cluster managers
+    """
     def __init__(self, config, state):
         self.config=config
         self.state=state
@@ -78,6 +81,9 @@ class ClusterManager(object):
         assert 0, 'Must define vacate_node'
     
 class TorqueManager(ClusterManager):
+    """
+    this class deals with Torque
+    """
     def __init__(self, config):
         ClusterManager.__init__(self, config, {"torque":True, "maui":True})
         
@@ -390,6 +396,9 @@ class TorqueManager(ClusterManager):
             torque_utils.delete_job(jobid, self.config['delete_job_command'])
 
 class SGEManager(ClusterManager):
+    """
+    this class deals with SGE
+    """
     def __init__(self, config):
         ClusterManager.__init__(self, config, {"sge":True})
 

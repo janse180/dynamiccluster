@@ -1,3 +1,6 @@
+"""
+a collection of functions that calls SGE commands, used by SGEManager
+"""
 import subprocess
 import string
 import shlex

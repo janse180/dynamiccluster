@@ -1,3 +1,6 @@
+"""
+This class works out how many new instances are needed according to current pending jobs
+"""
 from dynamiccluster.worker import Task
 from dynamiccluster.utilities import getLogger
 import math

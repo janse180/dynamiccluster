@@ -1,3 +1,6 @@
+"""
+Graphite plugin, it sends stats of Dynamic cluster to graphite
+"""
 from dynamiccluster.utilities import getLogger
 from dynamiccluster.data import WorkerNode
 from dynamiccluster.data import Instance
@@ -39,7 +42,7 @@ class GraphiteReporter(threading.Thread):
                 "unknown exception while connecting to %s - %s" %
                 (self.__address, error)
             )
-        log.debug("graphite reporter has started.")
+        log.info("graphite reporter has started.")
         count=0
         while self.__running:
             if count%self.__interval==0:
@@ -142,7 +145,7 @@ class GraphiteReporter(threading.Thread):
         # Set the self.socket to None, no matter what.
         finally:
             _socket = None
-        log.debug("graphite reporter has quit.")
+        log.info("graphite reporter has quit.")
 
     def stop(self):
         self.__running=False

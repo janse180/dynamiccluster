@@ -1,3 +1,6 @@
+"""
+SaltStack client
+"""
 from dynamiccluster.utilities import getLogger
 from dynamiccluster.config_checker import ConfigChecker
 from dynamiccluster.data import WorkerNode
@@ -52,7 +55,9 @@ class SaltListener(threading.Thread):
         self.__running=False
                 
 class SaltChecker(ConfigChecker):
-
+    """
+    check configuration status of an instance
+    """
     def check(self, instance):
         import salt.client
         local = salt.client.LocalClient()

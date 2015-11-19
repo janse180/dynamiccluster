@@ -1,3 +1,6 @@
+"""
+a collection of functions that calls Torque/MAUI commands, used by TorqueManager
+"""
 import subprocess
 import string
 import shlex

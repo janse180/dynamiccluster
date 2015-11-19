@@ -6,7 +6,7 @@ log = getLogger(__name__)
 
 def run_post_command(wn, command):
     cmd=command.format(wn.hostname, wn.instance.ip, wn.instance.instance_name, wn.instance.cloud_resource)
-    log.debug("post command (%s): %s"%(wn.hostname,cmd))
+    log.info("post command (%s): %s"%(wn.hostname,cmd))
     try:
         post_action = shlex.split(cmd)
         sp = subprocess.Popen(post_action, shell=False,

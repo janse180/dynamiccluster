@@ -1,3 +1,6 @@
+"""
+Worker thread that runs tasks
+"""
 import threading
 import time
 import sys
@@ -34,6 +37,9 @@ class Result(object):
         return "Result: type: %s, status: %s, data: %s"%(["WorkerCrash", "Provision", "Destroy", "UpdateCloudState", "UpdateConfigStatus"][self.type], ["Success", "Failed"][self.status], self.data)
       
 class Worker(threading.Thread):
+    """
+    worker thread, get a task, do the job, and return result
+    """
     def __init__(self, id, task_queue, result_queue):
         threading.Thread.__init__(self, name="Worker %s"%id)
         self.id=id
@@ -45,7 +51,7 @@ class Worker(threading.Thread):
         self.__running=False
 
     def run(self):
-        log.debug("worker %s started"%self.id)
+        log.info("worker %s started"%self.id)
         while self.__running:
             try:
                 log.notice("worker %s waiting for task, is running? %s, queue %s size %s"%(self.id,self.__running,self.__task_queue,self.__task_queue.qsize()))
@@ -75,7 +81,7 @@ class Worker(threading.Thread):
                 log.exception("worker %s caught unknown exception, report to parent"%self.id)
                 self.__result_queue.put(Result(task.type if task else Task.Unknown, Result.WorkerCrash, {'id':self.id}))
                 break
-        log.debug("worker %s has quit"%self.id)
+        log.info("worker %s has quit"%self.id)
 
     def do_task(self, task):
         if task.type==Task.Provision:

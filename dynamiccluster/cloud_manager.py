@@ -1,3 +1,6 @@
+"""
+interface of cloud managers
+"""
 from dynamiccluster.utilities import get_unique_string, load_template_with_jinja, getLogger, hostname_lookup, unix_time
 from dynamiccluster.data import Instance
 from dynamiccluster.exceptions import CloudNotAvailableException, FlavorNotFoundException

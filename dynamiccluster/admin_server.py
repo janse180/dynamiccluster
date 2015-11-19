@@ -1,4 +1,6 @@
-
+"""
+This class provides the RESTful interface, it is based on a mini WSGI server, bottlepy: http://bottlepy.org/docs/dev/index.html
+"""
 from bottle import route, run, static_file, request, HTTPError, HTTPResponse
 import threading
 from dynamiccluster.utilities import getLogger, get_prefix

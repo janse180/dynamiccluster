@@ -8,6 +8,9 @@ class ConfigChecker(object):
         assert 0, 'Must define check'
         
 class PortChecker(ConfigChecker):
+    """
+    Check if a port is opened.
+    """
     def __init__(self, port):
         self.port=port
     def check(self, instance):

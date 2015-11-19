@@ -1,3 +1,6 @@
+"""
+this class deals with OpenStack
+"""
 from dynamiccluster.utilities import get_unique_string, load_template_with_jinja, getLogger, hostname_lookup, unix_time
 from dynamiccluster.data import Instance
 from dynamiccluster.exceptions import CloudNotAvailableException, FlavorNotFoundException
@@ -74,6 +77,9 @@ class OpenStackManager(CloudManager):
         return new_instances
     
     def update(self, instance):
+        """
+        update status of instance
+        """
         log.notice("Getting instance %s..." % (instance.uuid))
         try:
             server = self.__conn.servers.get(instance.uuid)
@@ -175,6 +181,9 @@ class OpenStackManager(CloudManager):
         raise FlavorNotFoundException()
     
     def get_state(self, server):
+        """
+        convert openstack state to dynamic cluster state
+        """
         if server.status == "ERROR" or getattr(server,"OS-EXT-STS:vm_state") == "error":
             return Instance.Error
         elif server.status == "ACTIVE":

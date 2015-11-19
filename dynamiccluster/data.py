@@ -1,3 +1,6 @@
+"""
+Data classes
+"""
 import json
 import time
 import inspect

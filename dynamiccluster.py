@@ -14,6 +14,9 @@ import yaml
 log = getLogger("dynamiccluster")
 
 class DynamicClusterLoader(object):
+	"""
+	Bootstrap class that loads parameters and starts the main program
+	"""
 	def __init__(self):
 		self.__server = None
 		self.__argv = None

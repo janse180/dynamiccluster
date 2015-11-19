@@ -1,3 +1,6 @@
+"""
+This class deals with AWS
+"""
 from dynamiccluster.utilities import get_unique_string, load_template_with_jinja, getLogger, hostname_lookup, unix_time, get_aws_vcpu_num_by_instance_type
 from dynamiccluster.data import Instance, WorkerNode
 from dynamiccluster.exceptions import CloudNotAvailableException, FlavorNotFoundException
@@ -151,6 +154,9 @@ class AWSManager(CloudManager):
         return new_instances
     
     def update(self, instance):
+        """
+        update instance status
+        """
         server=None
         if instance.spot_id is not None and instance.uuid==None:
             log.notice("Updating spot request %s..." % (instance.spot_id))
