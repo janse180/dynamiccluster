@@ -11,15 +11,13 @@ permalink: /design.html
 
 <img src="./images/system-structure.png" alt="System Structure"  />
 
-Dynamic Cluster runs a main process and a number of worker processes.
+Dynamic Cluster runs the dynamic engine in the main thread, a number of worker thread, an admin server thread and plugin thread(s).
 
-The main process has a query thread, an admin server thread and plugin thread(s).
+The dynamic engine queries the cluster and generates cloud tasks. It then puts the tasks into a task queue.
 
-The query thread queries the cluster and generates cloud tasks. It then puts the tasks into a task queue.
+The worker threads consume the task queue and run tasks. These tasks are to communicate with the cloud system to start/delete instances or get instance states, etc. Then worker threads put results into the result queue.
 
-The worker processes consume the task queue and run tasks. These tasks are to communicate with the cloud system to start/delete instances or get instance states, etc. Then worker processes put results into the result queue.
-
-The query thread consumes the result queue and acts on the results, such as modifying the cluster (add or delete nodes) or generating another task.
+The dynamic engine consumes the result queue and acts on the results, such as modifying the cluster (add or delete nodes) or generating another task.
 
 Each plugin starts a thread. For example, the graphite plugin thread sends messages to an external Graphite server.
 
