@@ -211,7 +211,8 @@ class AWSManager(CloudManager):
                     instance.dns_name=server.public_dns_name
                 else:
                     instance.ip=server.private_ip_address
-                    instance.dns_name=hostname_lookup(instance.ip) #server.private_dns_name
+                    if instance.ip is not None:
+                        instance.dns_name=hostname_lookup(instance.ip) #server.private_dns_name
                 instance.availability_zone=server.placement
                 instance.image_uuid=server.image_id
         return instance
