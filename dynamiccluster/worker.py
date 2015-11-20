@@ -71,6 +71,8 @@ class Worker(threading.Thread):
                     if e.errno == errno.EINTR:
                         break
                     log.exception("IO ERROR")
+                    self.__task_queue.task_done()
+                    time.sleep(1)
                 except Exception as e:
                     log.exception("task (%s) cannot be executed." % task)
                     self.__result_queue.put(Result(task.type, Result.Failed, task.data))
