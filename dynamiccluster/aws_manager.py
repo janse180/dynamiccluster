@@ -81,8 +81,9 @@ class AWSManager(CloudManager):
                         timeout=self.config["spot_timeout"]
                     valid_until=(datetime.datetime.utcnow()+datetime.timedelta(0, timeout)).isoformat()
                     kwargs={"count":1, "valid_until": valid_until, "user_data": userdata_string, 
-                            "placement": self.config['availability_zone'], "instance_type": self.config['instance_type'], 
-                            "key_name": self.config['key_name']}
+                            "instance_type": self.config['instance_type'], "key_name": self.config['key_name']}
+                    if 'availability_zone' in self.config:
+                        kwargs["placement"]=self.config['availability_zone']
                     if "subnet_id" in self.config:
                         interface = NetworkInterfaceSpecification(subnet_id=self.config['subnet_id'],groups=self.config['security_groups'],
                                                                   associate_public_ip_address=True)
@@ -104,7 +105,8 @@ class AWSManager(CloudManager):
                     instance.key_name=self.config['key_name']
                     instance.flavor=self.config['instance_type']
                     instance.security_groups=self.config['security_groups']
-                    instance.availability_zone=self.config['availability_zone']
+                    if 'availability_zone' in self.config:
+                        instance.availability_zone=self.config['availability_zone']
                     instance.image_uuid=self.config['image_id']
                     instance.cloud_resource=self.name
                     instance.state=Instance.Pending
@@ -118,7 +120,9 @@ class AWSManager(CloudManager):
                     new_instances.append(instance)
                 else:
                     kwargs={"key_name": self.config['key_name'], "max_count": 1, "min_count": 1, "user_data": userdata_string, 
-                            "instance_type": self.config['instance_type'], "placement": self.config['availability_zone']}
+                            "instance_type": self.config['instance_type']}
+                    if 'availability_zone' in self.config:
+                        kwargs["placement"]=self.config['availability_zone']
                     if "subnet_id" in self.config:
                         interface = NetworkInterfaceSpecification(subnet_id=self.config['subnet_id'],groups=self.config['security_groups'],
                                                                   associate_public_ip_address=True)
@@ -138,7 +142,8 @@ class AWSManager(CloudManager):
                         instance.key_name=self.config['key_name']
                         instance.flavor=self.config['instance_type']
                         instance.security_groups=self.config['security_groups']
-                        instance.availability_zone=self.config['availability_zone']
+                        if 'availability_zone' in self.config:
+                            instance.availability_zone=self.config['availability_zone']
                         instance.image_uuid=self.config['image_id']
                         if "subnet_id" in self.config:
                             instance.subnet_id=self.config['subnet_id']

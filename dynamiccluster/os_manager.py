@@ -55,7 +55,11 @@ class OpenStackManager(CloudManager):
                 else:
                     log.exception("userdata file does not exist, can't create VM, please check your config.")
                     return None
-                server = self.__conn.servers.create(server_name, self.config['image_uuid'], flavor_obj, key_name=self.config['key_name'], max_count=1, min_count=1, userdata=userdata_string, security_groups=self.config['security_groups'], availability_zone=self.config['availability_zone']) #scheduler_hints={'cell':self.default_availability_zone})
+                kwargs={"key_name": self.config['key_name'], "max_count": 1, "min_count": 1, "userdata": userdata_string, 
+                        "security_groups": self.config['security_groups']}
+                if 'availability_zone' in self.config:
+                    kwargs['availability_zone']=self.config['availability_zone']
+                server = self.__conn.servers.create(server_name, self.config['image_uuid'], flavor_obj, **kwargs) #scheduler_hints={'cell':self.default_availability_zone})
                 instance = Instance(server.id)
                 instance.instance_name=server_name
                 instance.vcpu_number=flavor_obj.vcpus
@@ -63,7 +67,8 @@ class OpenStackManager(CloudManager):
                 instance.key_name=self.config['key_name']
                 instance.flavor=self.config['flavor']
                 instance.security_groups=self.config['security_groups']
-                instance.availability_zone=self.config['availability_zone']
+                if 'availability_zone' in self.config:
+                    instance.availability_zone=self.config['availability_zone']
                 instance.image_uuid=self.config['image_uuid']
                 instance.cloud_resource=self.name
                 instance.state=self.get_state(server)
