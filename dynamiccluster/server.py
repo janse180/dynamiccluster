@@ -407,7 +407,7 @@ class DynamicEngine():
             else:
                 log.info("unable to remove instance %s in the normal way, force delete"%worker_node.hostname)
                 self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))
-        else:
+        elif time.time()-worker_node.instance.last_update_time>self.__cloud_poller_interval:
             # update cloud status
             log.debug("worker node %s is down, check its cloud state"%worker_node.hostname)
             self.new_task(worker_node, Task(Task.UpdateCloudState, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))

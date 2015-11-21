@@ -132,7 +132,8 @@ class AWSManager(CloudManager):
                         kwargs["security_group_ids"]=self.config['security_groups']
                     if bdm:
                         kwargs["block_device_map"]=bdm
-                    reservation = self.conn.run_instances(self.config['image_id'], **kwargs) 
+                    reservation = self.conn.run_instances(self.config['image_id'], **kwargs)
+                    time.sleep(1)
                     for server in reservation.instances:
                         server.add_tag('Name', server_name)
                         instance = Instance(server.id)
