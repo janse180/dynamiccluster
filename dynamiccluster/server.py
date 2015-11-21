@@ -386,7 +386,8 @@ class DynamicEngine():
     
     def on_error(self, worker_node):
         if worker_node.instance.state==Instance.Inexistent:    
-            log.info("instance %s is gone, remove it"%worker_node.hostname)
+            log.info("instance %s is gone, delete all jobs and remove it"%worker_node.hostname)
+            self.__cluster.vacate_node(worker_node)
             self.__cluster.remove_node(worker_node, self.config['cloud'][worker_node.instance.cloud_resource]['reservation'])
             self.info.worker_nodes.remove(worker_node)
             self.run_post_vm_destroy_command(worker_node)
@@ -406,6 +407,10 @@ class DynamicEngine():
             else:
                 log.info("unable to remove instance %s in the normal way, force delete"%worker_node.hostname)
                 self.transit(worker_node, WorkerNode.Deleting, Task(Task.Destroy, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))
+        else:
+            # update cloud status
+            log.debug("worker node %s is down, check its cloud state"%worker_node.hostname)
+            self.new_task(worker_node, Task(Task.UpdateCloudState, {"resource": self.get_resource_by_name(worker_node.instance.cloud_resource), "instance": worker_node.instance}))
             
     def on_deleting(self, worker_node):
         if worker_node.instance.state==Instance.Inexistent:
